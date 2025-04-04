@@ -1,0 +1,457 @@
+*&---------------------------------------------------------------------*
+*& Report ZMM_SUPPLIER_INFORECORD_REP
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmm_supplier_inforecord_rep.
+
+
+TABLES : eina,eine.
+
+
+TYPES : BEGIN OF ty_final,
+          infnr TYPE eina-infnr,
+          lifnr TYPE eina-lifnr,
+          matnr TYPE eina-matnr,
+          fgld  TYPE char100,
+          rmld  TYPE char100,
+          werks TYPE eine-werks,
+          netpr TYPE eine-netpr,
+          erdat TYPE eine-erdat,
+          ekgrp TYPE eine-ekgrp,
+          datab TYPE a017-datab,
+          datbi TYPE a017-datbi,
+          knumh TYPE a017-knumh,
+          name1 TYPE lfa1-name1,
+          bismt TYPE mara-bismt,
+          maktx TYPE makt-maktx,
+          mwskz TYPE eine-mwskz,
+*          cost type numc4,
+          cost  TYPE p DECIMALS 4,
+          count TYPE int4,
+          text1 TYPE t007s-text1,
+          eknam TYPE t024-eknam,
+          ernam TYPE konh-ernam,
+*          kbetr TYPE konp-kbetr,
+          kbetr TYPE  p DECIMALS 4,
+          waers TYPE eine-waers,
+          PROFS TYPE lfa1-PROFS,
+          VERKF TYPE eina-VERKF,
+*          INFNR TYPE eina-INFNR,
+          RELIF TYPE eina-RELIF,
+          RELIF_c TYPE char10,
+          RDPRF TYPE eine-RDPRF,
+
+        END OF ty_final.
+
+DATA : lt_lines   TYPE STANDARD TABLE OF tline,
+       lt_lines1  TYPE STANDARD TABLE OF tline,
+       lv_string  TYPE string,
+       lv_string1 TYPE string,
+       lv_matnr   TYPE  thead-tdname,
+       lv_info    TYPE  thead-tdname,
+       lv_ebeln   TYPE thead-tdname.
+
+DATA : it_final TYPE STANDARD TABLE OF ty_final,
+       wa_final TYPE ty_final.
+
+DATA : count TYPE int4.
+
+
+DATA : it_fieldcat TYPE slis_t_fieldcat_alv,
+       wa_fieldcat TYPE slis_fieldcat_alv,
+       lv          TYPE disvariant,
+       wa_layout   TYPE slis_layout_alv.
+
+DATA: i_sort  TYPE slis_t_sortinfo_alv,
+      wa_sort LIKE LINE OF i_sort.
+
+
+
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+
+  SELECT-OPTIONS : s_lifnr   FOR  eina-lifnr ,"NO INTERVALS NO-EXTENSION,
+                   s_matnr  FOR  eina-matnr ,"NO INTERVALS NO-EXTENSION,
+                   s_werks  FOR  eine-werks DEFAULT '1100' NO INTERVALS NO-EXTENSION.
+
+SELECTION-SCREEN END OF BLOCK b1.
+
+SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-002.
+
+  PARAMETERS : a1 RADIOBUTTON GROUP b1,
+               a2 RADIOBUTTON GROUP b1.
+
+SELECTION-SCREEN END OF BLOCK b2.
+
+
+
+
+START-OF-SELECTION.
+
+
+  PERFORM get_data.
+  PERFORM field_cat.
+  PERFORM display_data.
+
+
+FORM get_data.
+  SELECT
+       a~lifnr,
+       a~matnr,
+       a~INFNR,
+       a~VERKF,
+       a~RELIF,
+       b~ekgrp,
+       b~werks,
+       b~netpr,
+       b~erdat,
+       b~mwskz,
+       b~RDPRF,
+       c~datab,
+       c~datbi,
+       c~knumh,
+       c~esokz,
+      c~werks AS werks1 ,
+      b~waers,
+      e~PROFS,
+       d~kbetr
+      FROM eina AS a
+      INNER JOIN eine AS b
+      ON ( a~infnr = b~infnr )
+      INNER JOIN a017 AS c
+      ON ( c~lifnr = a~lifnr AND c~matnr = a~matnr AND c~werks = b~werks )
+      INNER JOIN  konp AS d ON ( c~knumh = d~knumh )
+    inner JOIN lfa1 as e on ( a~lifnr = e~lifnr )
+      INTO TABLE @DATA(it_data)
+      WHERE a~lifnr IN @s_lifnr
+      AND a~matnr IN   @s_matnr
+      AND b~werks IN    @s_werks
+      AND c~esokz = '0'.
+
+  SORT it_data ASCENDING BY datab.
+  DATA: lv_kbetr TYPE kbetr.
+  LOOP AT it_data INTO DATA(wa_data).
+
+    wa_final-lifnr  = wa_data-lifnr.
+    wa_final-matnr  = wa_data-matnr.
+    wa_final-ekgrp  = wa_data-ekgrp.
+*   wa_final-Name1  = wa_data-Name1.
+    wa_final-werks  = wa_data-werks.
+    wa_final-netpr  = wa_data-netpr.
+    wa_final-erdat  = wa_data-erdat.
+    wa_final-datab  = wa_data-datab.
+    wa_final-datbi  = wa_data-datbi.
+    wa_final-mwskz  = wa_data-mwskz.
+    wa_final-knumh  = wa_data-knumh.
+    wa_final-waers = wa_data-waers.
+    wa_final-PROFS = wa_data-PROFS.
+    wa_final-INFNR = wa_data-INFNR.
+    wa_final-VERKF = wa_data-VERKF.
+    wa_final-RELIF = wa_data-RELIF.
+    wa_final-RDPRF = wa_data-RDPRF.
+
+
+if wa_final-RELIF  = 'X'.
+  wa_final-RELIF_C = 'Yes'.
+  else.
+    wa_final-RELIF_C = 'No'.
+  ENDIF.
+
+
+
+    IF wa_final-netpr IS NOT INITIAL .
+      wa_final-cost = wa_final-netpr / 100.
+    ENDIF.
+
+
+
+    IF wa_data-kbetr IS NOT INITIAL.
+      wa_final-kbetr = wa_data-kbetr / 100.
+    ENDIF.
+
+*      lv_kbetr = wa_final-kbetr.
+*    IF s_matnr IS NOT INITIAL.
+*      wa_final-cost = lv_kbetr.
+*      CLEAR lv_kbetr.
+*      lv_kbetr = wa_data-kbetr / 100.
+*    ELSE.
+*      wa_final-cost = wa_final-netpr / 100.
+*    ENDIF.
+
+
+
+
+
+
+    lv_matnr = wa_final-matnr.
+
+    CLEAR lv_string.
+    REFRESH lt_lines.
+    CALL FUNCTION 'READ_TEXT'
+      EXPORTING
+        client                  = sy-mandt
+        id                      = 'GRUN'
+        language                = sy-langu
+        name                    = lv_matnr
+        object                  = 'MATERIAL'
+      TABLES
+        lines                   = lt_lines
+      EXCEPTIONS
+        id                      = 1
+        language                = 2
+        name                    = 3
+        not_found               = 4
+        object                  = 5
+        reference_check         = 6
+        wrong_access_to_archive = 7
+        OTHERS                  = 8.
+    IF sy-subrc = 0.
+
+      IF sy-subrc = 0.
+        LOOP AT lt_lines ASSIGNING FIELD-SYMBOL(<ls_lines01>).
+          CONCATENATE  lv_string <ls_lines01>-tdline  INTO lv_string .
+        ENDLOOP.
+      ENDIF.
+    ENDIF.
+
+    wa_final-fgld = lv_string .
+
+*     DESCRIBE TABLE it_data LINES count.
+*
+*
+*      wa_final-count = count.
+    """"""""""""""added for no of changes based on lifnr and vendor""""""""""""""""""
+
+    DATA(it_data1) = it_data.
+
+    DELETE it_data1 WHERE lifnr NE wa_final-lifnr.
+    DELETE it_data1 WHERE matnr NE wa_final-matnr.
+
+    DESCRIBE TABLE it_data1 LINES count.
+
+    wa_final-count = count .
+    CLEAR :it_data1.
+    """"""""""""""added for no of changes based on lifnr and vendor""""""""""""""""""
+
+    SELECT SINGLE text1 FROM t007s INTO wa_final-text1 WHERE mwskz = wa_final-mwskz AND spras = 'E' AND kalsm = 'ZMNTAX'.
+    SELECT SINGLE eknam FROM t024 INTO wa_final-eknam WHERE ekgrp = wa_final-ekgrp .
+    SELECT SINGLE ernam FROM konh INTO wa_final-ernam WHERE knumh = wa_final-knumh .
+
+
+    SELECT SINGLE name1 FROM lfa1 INTO wa_final-name1 WHERE lifnr = wa_final-lifnr.
+    SELECT SINGLE bismt FROM mara INTO wa_final-bismt WHERE matnr = wa_final-matnr.
+    SELECT SINGLE maktx FROM makt INTO wa_final-maktx WHERE matnr = wa_final-matnr.
+
+
+**************************************** Added by Dharani - 21.11.2023 *********************************************************
+
+
+*at FIRST.
+*  wa_final-COST = ' '.
+*  ENDAT.
+
+
+
+
+    LOOP AT it_final INTO DATA(ls_temp) WHERE  lifnr = wa_final-lifnr AND matnr = wa_final-matnr
+      AND werks = wa_final-werks.
+
+
+      IF ls_temp-datbi < wa_final-datab.
+
+        wa_final-cost = ls_temp-kbetr.
+
+      ENDIF.
+
+    ENDLOOP.
+
+
+
+
+
+
+
+    APPEND : wa_final TO it_final.
+    CLEAR  : wa_final.
+
+
+  ENDLOOP.
+
+
+*data(gt_final) = it_final[].
+*sort gt_final by  WERKS lifnr matnr  datbi  ASCENDING."datbi
+*
+*delete ADJACENT DUPLICATES FROM gt_final COMPARING  WERKS lifnr matnr.
+*
+*sort gt_final by  WERKS lifnr matnr datbi ASCENDING."datbi
+*
+*
+*loop at gt_final into data(gs_final).
+*
+*  loop at it_final ASSIGNING FIELD-SYMBOL(<lk_final>) WHERE datbi = gs_final-datbi and matnr = gs_final-matnr and
+*
+*    LIFNR = gs_final-LIFNR and WERKS = gs_final-WERKS.
+*
+*
+*    clear : <lk_final>-COST.
+*
+*    ENDLOOP.
+*    ENDLOOP.
+
+
+
+**************************************** Added by Dharani - 21.11.2023 *********************************************************
+
+
+
+  IF  a1 = 'X' .
+
+    SORT it_final DESCENDING BY matnr lifnr datbi.
+
+  ELSE.
+
+*    SORT it_final DESCENDING BY matnr lifnr .            """"""""" hidden by vikram (16/12/2023)
+    SORT it_final DESCENDING BY matnr lifnr datbi.        """"""""" added by vikram (16/12/2023)
+    DELETE ADJACENT DUPLICATES FROM it_final COMPARING matnr lifnr.
+
+  ENDIF.
+
+
+
+    SORT it_final ASCENDING BY   matnr datbi lifnr.
+
+
+ENDFORM.
+
+FORM field_cat.
+
+  PERFORM genfcat USING 'Supplier Code'                    'LIFNR'           '1' '' ''.
+  PERFORM genfcat USING 'Supplier Name'                    'NAME1'           '2' '' ''.
+  PERFORM genfcat USING 'Item code'                        'MATNR'           '3' '' ''.
+  PERFORM genfcat USING 'Old Item Code'                    'BISMT'           '4' '' ''.
+  PERFORM genfcat USING 'Description'                      'MAKTX'           '5' '' ''.
+  PERFORM genfcat USING 'Long Desc'                        'FGLD'             '5' '' ''.
+  PERFORM genfcat USING 'Old Price'                        'COST'            '6' '' 'X'.
+  PERFORM genfcat USING 'New Price'                        'KBETR'            '6' '' ''.
+  PERFORM genfcat USING 'Currency'                         'WAERS'            '6' '' ''.
+  PERFORM genfcat USING 'Valid From'                       'DATAB'           '7' '' ''.
+  PERFORM genfcat USING 'Valid To'                         'DATBI'           '8' '' ''.
+  PERFORM genfcat USING 'Created On'                       'ERDAT'           '9' '' ''.
+  PERFORM genfcat USING 'Tax code'                         'MWSKZ'           '10' '' ''.
+  PERFORM genfcat USING 'Tax code Name'                    'TEXT1'           '11' '' ''.
+  PERFORM genfcat USING 'Created By'                       'ERNAM'           '12' '' ''.
+  PERFORM genfcat USING 'Purchase Group Code'              'EKGRP'           '13' '' ''.
+  PERFORM genfcat USING 'Purchase Group Name'              'EKNAM'           '14' '' ''.
+  PERFORM genfcat USING 'Plant'                            'WERKS'           '15' '' ''.
+  PERFORM genfcat USING 'No of conditions'                 'COUNT'           '16' '' ''.
+  PERFORM genfcat USING 'Supplier Cordinators'             'PROFS'           '17' '' ''.
+  PERFORM genfcat USING 'Item Cordinators'                 'VERKF'           '17' '' ''.
+  PERFORM genfcat USING 'Info record'                      'INFNR'           '17' '' ''.
+  PERFORM genfcat USING 'Default Supplier'                 'RELIF_C'         '17' '' ''.
+  PERFORM genfcat USING 'Standard Packing Qty'             'RDPRF'           '17' '' ''.
+
+ENDFORM.
+FORM genfcat  USING    VALUE(p_0122)
+  VALUE(p_0123)
+  VALUE(p_0124)
+  VALUE(p_0125)
+  VALUE(p_0126).
+  wa_fieldcat-col_pos    = p_0124.
+  wa_fieldcat-fieldname  = p_0123.
+  wa_fieldcat-seltext_l  = p_0122.
+  wa_fieldcat-lowercase  = 'X'.
+  wa_fieldcat-do_sum  = p_0125.
+  wa_fieldcat-no_zero  = p_0126.
+
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+ENDFORM.
+
+FORM display_data.
+  wa_layout-colwidth_optimize = 'X'.
+*  DATA: lv_repid TYPE sy-repid.
+*  wa_layout-no_colhead = 'X'.
+
+  wa_layout-info_fieldname = 'ROW_COLOR'.
+  wa_layout-colwidth_optimize = 'X'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK  = ' '
+*     I_BYPASSING_BUFFER = ' '
+*     I_BUFFER_ACTIVE    = ' '
+      i_callback_program = sy-repid
+*     I_CALLBACK_PF_STATUS_SET    = ' '
+*     I_CALLBACK_USER_COMMAND     = ' '
+*     i_callback_top_of_page = 'TOP-OF-PAGE'
+*     i_callback_html_top_of_page = 'TOP-OF-PAGE'
+*     I_CALLBACK_HTML_END_OF_LIST = ' '
+*     I_STRUCTURE_NAME   =
+*     I_BACKGROUND_ID    = ' '
+*     I_GRID_TIT  LE                      = '               Rupees in Lakh'
+*     I_GRID_SETTINGS    =
+      is_layout          = wa_layout
+      it_fieldcat        = it_fieldcat
+*     IT_EXCLUDING       =
+*     IT_SPECIAL_GROUPS  =
+      it_sort            = i_sort
+*     IT_FILTER          =
+*     IS_SEL_HIDE        =
+*     I_DEFAULT          = 'X'
+      i_save             = 'A'
+      is_variant         = lv
+*     IT_EVENTS          = I_EVENTS
+*     IT_EVENT_EXIT      =
+*     IS_PRINT           =
+*     IS_REPREP_ID       =
+*     I_SCREEN_START_COLUMN  = 0
+*     I_SCREEN_START_LINE    = 0
+*     I_SCREEN_END_COLUMN    = 0
+*     I_SCREEN_END_LINE  = 0
+*     I_HTML_HEIGHT_TOP  = 0
+*     I_HTML_HEIGHT_END  = 0
+*     IT_ALV_GRAPHICS    =
+*     IT_HYPERLINK       =
+*     IT_ADD_FIELDCAT    =
+*     IT_EXCEPT_QINFO    =
+*     IR_SALV_FULLSCREEN_ADAPTER  =
+* IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER     =
+*     ES_EXIT_CAUSED_BY_USER =
+    TABLES
+      t_outtab           = it_final
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+ENDFORM.
+
+*FORM top-of-page.
+*
+*  DATA : it_listheader TYPE slis_t_listheader,
+*         wa_listheader TYPE slis_listheader.
+*
+*  wa_listheader-typ   = 'H'.
+*  wa_listheader-info  = 'Sales Invoice Pick Details'.
+*  APPEND wa_listheader TO  it_listheader.
+*  CLEAR :  wa_listheader.
+*
+*  APPEND wa_listheader TO it_listheader.
+*  CLEAR wa_listheader.
+*
+*  wa_listheader-typ  = 'S'.
+*  CONCATENATE 'DATE : ' sy-datum+6(2) '.' sy-datum+4(2) '.' sy-datum(4)' ' ' ' INTO wa_listheader-info SEPARATED BY space.
+*
+*  APPEND wa_listheader TO it_listheader.
+*  CLEAR: wa_listheader.
+*
+*
+*  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+*    EXPORTING
+*      it_list_commentary = it_listheader.
+*ENDFORM.
