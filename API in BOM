@@ -1,0 +1,284 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+
+    CALL METHOD ME->GET_USERDETAILS
+      EXPORTING
+        SERVER = SERVER         " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        TYPE   = DATA(TYPE).         " Single-Character Flag
+
+    TRANSLATE TYPE TO UPPER CASE.
+
+
+    DATA : IT_HEAD TYPE TABLE OF ZAPI_BOM_HEADER,
+           WA_HEAD TYPE ZAPI_BOM_HEADER.
+
+    DATA : IT_ITEM TYPE TABLE OF ZAPI_BOM_ITEM,
+           WA_ITEM TYPE ZAPI_BOM_ITEM.
+
+
+    TYPES : BEGIN OF TY_STRU,
+              MATERIAL         TYPE MATNR,
+              PLANT            TYPE WERKS_D,
+              BOM              TYPE STNUM,
+              ALTERNATIVE_BOM  TYPE STLAL,
+              BOM_USAGE        TYPE STLAN,
+              TECHNICAL_TYPE   TYPE TETYP_D,
+              BOM_DESCRIPTION  TYPE BKTXT,
+              ALTERNATIVE_TXT  TYPE BKTXT,
+              BASE_QTY         TYPE MENGE_D,
+              UOM              TYPE MEINS,
+              CHANGE_NUMBER    TYPE AENNR,
+              BOM_STATUS       TYPE STLST,
+              VALID_FROM       TYPE CHAR10,
+              DELETION_IND     TYPE LKENZ,
+              DELETION_FLAG    TYPE LOEKZ,
+              CAD_INDICATOR    TYPE LKENZ,
+              CHANGE_NUMBER1   TYPE AENNR,
+              CHANGE_NUMBER_TO TYPE AENRA,
+              VALID_FROM1      TYPE CHAR10,
+              VALID_TO         TYPE CHAR10,
+              CREATE_ON        TYPE CHAR10,     "ANDAT,
+              CREATED_BY       TYPE ANNAM,
+              CHANGE_ON        TYPE CHAR10,      "ANDAT,
+              CHANGE_BY        TYPE ANNAM,
+              MATERIAL1        TYPE MATNR,
+              PLANT1           TYPE WERKS_D,
+              ALTERNATIVE_BOM1 TYPE STNUM,
+              ITEM             TYPE SPOSN,
+              ICT              TYPE POSTP,
+              COMPONENT        TYPE MATNR,
+              COMPONENT_DESC   TYPE MAKTX,
+              QUANTITY         TYPE MENGE_D,
+              UOM1             TYPE MEINS,
+              ASM              TYPE STLKZ,
+              VALID_FROM2      TYPE CHAR10,
+              VALID_TO1        TYPE CHAR10,
+              ITEM_ID          TYPE ITMID,
+              VERSION          TYPE VERID,
+              "LAST_PRICE       TYPE char10,
+            END OF TY_STRU.
+
+
+    DATA : IT_FINAL TYPE TABLE OF TY_STRU,
+           WA_FINAL TYPE TY_STRU.
+
+
+    DATA : GS_JSON TYPE STRING .
+
+
+*    CALL METHOD me->get_userdetails
+*      EXPORTING
+*        server   =    server                   " HTTP Framework (iHTTP) HTTP Server
+*      IMPORTING
+**        material =  data(matnr)                " Material Number
+*        plant    =  data(werks)                " Plant Table for National (Centrally Agreed) Contracts
+*        alt_bom  =  data(stlal).               " Alternative BOM .
+
+
+    IF TYPE = 'X'.
+
+      SELECT A~MATNR,           " bom material
+             A~WERKS,           " plant
+             A~STLAN,           " bom usage
+             A~STLNR,           " bom
+             A~STLAL,           " Alternative BOM
+             B~STLTY,           " technical type
+             B~STKTX,           " bom usage desc
+             B~AENNR,           " change number
+             B~STLST,           " bom status
+             B~DATUV,           " valid from
+             B~VALID_TO,        " valid to
+             B~BMENG,           " base qty
+             B~BMEIN,           " uom
+             B~LKENZ,           " deletion ind
+             B~LOEKZ,           " deletion flag
+             B~CADKZ,           " cad ind
+             B~ECN_TO,          " change number to
+             B~ANDAT,           " created on time and valid to
+             B~ANNAM,           " created by
+             B~AEDAT,           " changed on time
+             B~AENAM,           " changed by
+             C~VERID           " version
+             "E~NETPR            " last purchase price
+        FROM MAST AS A
+        LEFT OUTER JOIN STKO AS B
+        ON ( A~STLNR = B~STLNR AND A~STLAL = B~STLAL )
+        LEFT OUTER JOIN EINA AS D
+        ON ( A~MATNR = D~MATNR )
+        LEFT OUTER JOIN EINE AS C
+        ON ( D~INFNR = C~INFNR )
+        "left outer JOIN EKPO AS E
+        "ON ( A~MATNR = E~NETPR )
+*      AND a~STLAL = b~STLAL
+        INTO TABLE @DATA(IT_BOM_HEAD)
+*      WHERE a~matnr = @matnr AND a~werks = @werks and a~stlal = @stlal.
+        WHERE  A~STLAL = '01'.  " a~werks = @werks AND    "and a~stlal = @stlal.
+
+      SORT IT_BOM_HEAD BY MATNR WERKS STLNR.
+      DELETE ADJACENT DUPLICATES FROM IT_BOM_HEAD COMPARING MATNR WERKS STLNR.
+
+    ELSEIF TYPE = ''.
+
+      SELECT A~MATNR,           " bom material
+             A~WERKS,           " plant
+             A~STLAN,           " bom usage
+             A~STLNR,           " bom
+             A~STLAL,           " Alternative BOM
+             B~STLTY,           " technical type
+             B~STKTX,           " bom usage desc
+             B~AENNR,           " change number
+             B~STLST,           " bom status
+             B~DATUV,           " valid from
+             B~VALID_TO,        " valid to
+             B~BMENG,           " base qty
+             B~BMEIN,           " uom
+             B~LKENZ,           " deletion ind
+             B~LOEKZ,           " deletion flag
+             B~CADKZ,           " cad ind
+             B~ECN_TO,          " change number to
+             B~ANDAT,           " created on time and valid to
+             B~ANNAM,           " created by
+             B~AEDAT,           " changed on time
+             B~AENAM,           " changed by
+             C~VERID            " version
+             "E~NETPR
+
+        FROM MAST AS A
+        LEFT OUTER JOIN STKO AS B
+        ON ( A~STLNR = B~STLNR AND A~STLAL = B~STLAL )
+        LEFT OUTER JOIN EINA AS D
+        ON ( A~MATNR = D~MATNR )
+        LEFT OUTER JOIN EINE AS C
+        ON ( D~INFNR = C~INFNR )
+       "LEFT OUTER JOIN EKPO AS E
+       "ON ( A~MATNR = E~NETPR )
+*      AND a~STLAL = b~STLAL
+        INTO TABLE @IT_BOM_HEAD
+*      WHERE a~matnr = @matnr AND a~werks = @werks and a~stlal = @stlal.
+        WHERE  A~STLAL <> '01'.  " a~werks = @werks AND    "and a~stlal = @stlal.
+
+    ENDIF.
+
+    LOOP AT IT_BOM_HEAD INTO DATA(WA_BOM).
+
+*if sy-tabix GE '1889'.
+      SELECT * FROM STAS INTO TABLE @DATA(IT_STAS) WHERE STLNR = @WA_BOM-STLNR AND STLAL = @WA_BOM-STLAL.
+      IF SY-SUBRC = 0.
+        SELECT * FROM STPO INTO TABLE @DATA(IT_STPO) FOR ALL ENTRIES IN @IT_STAS WHERE STLNR = @IT_STAS-STLNR AND STLKN = @IT_STAS-STLKN.
+      ENDIF.
+
+      LOOP AT IT_STPO INTO DATA(WA_STPO).
+
+
+        WA_FINAL-MATERIAL             = WA_BOM-MATNR.
+        WA_FINAL-PLANT                = WA_BOM-WERKS.
+        WA_FINAL-BOM                  = WA_BOM-STLNR.
+        WA_FINAL-ALTERNATIVE_BOM      = WA_BOM-STLAL.
+        WA_FINAL-BOM_USAGE            = WA_BOM-STLAN.
+        WA_FINAL-TECHNICAL_TYPE       = WA_BOM-STLTY.
+        SELECT SINGLE ANTXT FROM T416T INTO WA_FINAL-BOM_DESCRIPTION WHERE STLAN = WA_FINAL-BOM_USAGE AND SPRAS = SY-LANGU.
+*        wa_head-bom_description      = wa_bom-STKTX.
+        WA_FINAL-ALTERNATIVE_TXT      = WA_BOM-STKTX.
+        WA_FINAL-BASE_QTY             = WA_BOM-BMENG.
+        WA_FINAL-UOM                  = WA_BOM-BMEIN.
+        WA_FINAL-CHANGE_NUMBER        = WA_BOM-AENNR.
+        WA_FINAL-BOM_STATUS           = WA_BOM-STLST.
+        WA_FINAL-VALID_FROM1          = WA_BOM-DATUV."|{ WA_BOM-DATUV+0(4) }-{ WA_BOM-DATUV+4(2) }-{ WA_BOM-DATUV+6(2) }|.
+        WA_FINAL-DELETION_IND         = WA_BOM-LKENZ.
+        WA_FINAL-DELETION_FLAG        = WA_BOM-LOEKZ.
+        WA_FINAL-CAD_INDICATOR        = WA_BOM-CADKZ.
+        WA_FINAL-CHANGE_NUMBER1       = WA_BOM-AENNR.
+        WA_FINAL-CHANGE_NUMBER_TO     = WA_BOM-ECN_TO.
+        WA_FINAL-VALID_FROM           = WA_BOM-ANDAT."|{ WA_BOM-ANDAT+0(4) }-{ WA_BOM-ANDAT+4(2) }-{ WA_BOM-ANDAT+6(2) }|.
+*        wa_final-valid_to             = wa_bom-VALID_TO.
+        WA_FINAL-VALID_TO             = '99991231'.
+
+*        wa_final-create_on_time       = wa_bom-AEDAT.
+*        wa_final-created_by           = wa_bom-AENAM.
+
+
+        SELECT SINGLE ANDAT,ANNAM,AEDAT,AENAM FROM STKO INTO @DATA(WA_STKO) WHERE STLNR = @WA_FINAL-BOM AND STLAL = @WA_FINAL-ALTERNATIVE_BOM.
+        WA_FINAL-CREATE_ON            = WA_STKO-ANDAT.
+        WA_FINAL-CREATED_BY           = WA_STKO-ANNAM.
+        WA_FINAL-CHANGE_ON            = WA_STKO-AEDAT.
+        WA_FINAL-CHANGE_BY            = WA_STKO-AENAM.
+
+
+*        APPEND wa_head to it_head.
+
+
+        WA_FINAL-MATERIAL1         = WA_BOM-MATNR.
+        WA_FINAL-PLANT1            = WA_BOM-WERKS.
+        WA_FINAL-ALTERNATIVE_BOM1  = WA_BOM-STLAL.
+        WA_FINAL-ITEM              = WA_STPO-POSNR.
+        WA_FINAL-ICT               = WA_STPO-POSTP.
+        WA_FINAL-COMPONENT         = WA_STPO-IDNRK.
+        SELECT SINGLE MAKTX FROM MAKT INTO WA_FINAL-COMPONENT_DESC WHERE MATNR = WA_FINAL-COMPONENT AND SPRAS = SY-LANGU.
+        WA_FINAL-QUANTITY          = WA_STPO-MENGE.
+        WA_FINAL-UOM               = WA_STPO-MEINS.
+        WA_FINAL-VALID_FROM2       = WA_STPO-DATUV."|{ WA_STPO-DATUV+0(4) }-{ WA_STPO-DATUV+4(2) }-{ WA_STPO-DATUV+6(2) }|.
+        WA_FINAL-VALID_TO1         = '99991231'.
+        WA_FINAL-ITEM_ID           = WA_STPO-STLKN.
+        SELECT SINGLE MATNR FROM MAST INTO @DATA(WA_ASM) WHERE MATNR = @WA_FINAL-COMPONENT.
+        IF SY-SUBRC = 0.
+          WA_FINAL-ASM = 'X'.
+        ENDIF.
+
+
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            INPUT  = WA_FINAL-MATERIAL
+          IMPORTING
+            OUTPUT = WA_FINAL-MATERIAL.
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            INPUT  = WA_FINAL-MATERIAL1
+          IMPORTING
+            OUTPUT = WA_FINAL-MATERIAL1.
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            INPUT  = WA_FINAL-ITEM_ID
+          IMPORTING
+            OUTPUT = WA_FINAL-ITEM_ID.
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            INPUT  = WA_FINAL-BOM
+          IMPORTING
+            OUTPUT = WA_FINAL-BOM.
+
+        WA_FINAL-VERSION  = WA_BOM-VERID.
+
+
+        APPEND WA_FINAL TO IT_FINAL.
+        CLEAR : WA_FINAL,WA_ASM.
+
+      ENDLOOP.
+
+      CLEAR : IT_STPO.
+
+    ENDLOOP.
+
+*     wa_head-component[] = it_final[].
+
+*
+    GS_JSON = /UI2/CL_JSON=>SERIALIZE(
+              DATA             = IT_FINAL
+*              compress         = abap_true
+*              name             =
+              PRETTY_NAME      = /UI2/CL_JSON=>PRETTY_MODE-CAMEL_CASE
+          ) .
+
+    SERVER->RESPONSE->SET_CDATA(
+      EXPORTING
+        DATA   =  GS_JSON   " Character data
+*              offset = 0    " Offset into character data
+*              length = -1    " Length of character data
+    ).
+
+
+  ENDMETHOD.
