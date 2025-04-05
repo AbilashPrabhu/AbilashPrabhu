@@ -1,0 +1,809 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+    "  First Date  " Condition Type " Amount " Overall Status " Over all Cred Status " Over All Block status " Overall deliv status "
+
+
+    TYPES : BEGIN OF TY_STRU,
+              DOMESTICORDER                TYPE VBELN,
+              SOLDTOPARTY                  TYPE KUNNR,
+              SHIPTOPARTY                  TYPE KUNNR,
+              SOLDANDSHIPTOPARTYNAME       TYPE NAME1,
+              CUSTREFERENCE                TYPE BSTKD,
+              NETVALUE                     TYPE CHAR15,
+              CUSTREFDATE                  TYPE CHAR10,
+              REQDELIVDATE                 TYPE CHAR10,
+              COMPLETEDLV                  TYPE CHAR1,
+              DELIVERYBLOCK                TYPE CHAR20,
+              BILLINGBLOCK                 TYPE CHAR20,
+              PYTTERMS                     TYPE DZTERM,
+              PYTTERMSDESC                 TYPE CHAR20,
+              INCOVERSION                  TYPE INCOV,
+              INCOTERMS                    TYPE INCO1,
+              INCOLOCATION1                TYPE INCO2_L,
+              PRICINGDATE                  TYPE CHAR10,
+              TOTALWEIGHT                  TYPE CHAR15,
+              ITEM                         TYPE CHAR6,
+              MATERIAL                     TYPE MATNR,
+              ORDERQUANTITY                TYPE CHAR15,
+              DELIVERYQUANTITY             TYPE CHAR15,
+              PENDINGQUANTITY              TYPE CHAR15,
+              SALESUOM                     TYPE MEINS,
+              ITEMDESCRIPTION              TYPE MAKTX,
+              CUSTOMERMATERIALNUMBER       TYPE KDMAT,
+              ITEMCATEGORY                 TYPE PSTYV,
+              FIRSTDATE                    TYPE CHAR10,
+              PLANT                        TYPE WERKS_D,
+              CONDITIONTYPE                TYPE KSCHL,
+              AMOUNT                       TYPE CHAR15,
+              ITEMNETPRICE                 TYPE CHAR15,
+              CURRENCY                     TYPE WAERS,
+              ITEMNETVALUE                 TYPE CHAR15,
+              OVERALLSTATUS                TYPE CHAR20,
+              PROFITCENTER                 TYPE PRCTR,
+              SALEDOCUMENTITEM             TYPE CHAR5,
+              REASONFORREJECTION           TYPE CHAR20,
+              MATERIALGROUP                TYPE MATKL,
+              MATERIALGROUPNAME            TYPE WGBEZ,
+              DIVISON                      TYPE SPART,
+              CUSTOMERGROUP                TYPE CHAR20,
+              PRICELISTTYPE                TYPE CHAR20,
+              CUSTPRICEGROUP               TYPE KONDA,
+              CUSTPRICEGROUPDESC           TYPE CHAR20,
+              SALESDISTRICT                TYPE BZIRK,
+              SALESDISTRICTDESC            TYPE CHAR30,
+              ORDERCOMBINAT                TYPE KZAZU_D,
+              SHIPPINGPOINT                TYPE VSTEL,
+              STORLOCATION                 TYPE LGORT_D,
+              STORLOCATIONDESC             TYPE CHAR30,
+              PAYMENTTERMS                 TYPE DZTERM,
+              CUSTOMERDISCOUNTTYPE         TYPE KSCHA,
+              CUSTOMERDISCOUNTPERORAMT     TYPE CHAR15,
+              CUSTOMERDISCOUNTAMT          TYPE CHAR15,
+              SCHEMADISCOUNTTYPE           TYPE CHAR15,
+              SCHEMADISCOUNTPERORAMT       TYPE CHAR15,
+              SCHEMADISCOUNTAMT            TYPE CHAR15,
+              PRICETYPE                    TYPE CHAR15,
+              PRICEPERORAMT                TYPE CHAR15,
+              PRICEAMT                     TYPE CHAR15,
+              CASHDISCOUNT                 TYPE CHAR15,
+              INTERSTATEGSTTYPE            TYPE CHAR15,
+              INTERSTATEGSTPERORAMT        TYPE CHAR15,
+              INTERSTATEGSTAMT             TYPE CHAR15,
+              CENTRALGSTTYPE               TYPE CHAR15,
+              CENTRALGSTPERORAMT           TYPE CHAR15,
+              CENTRALGSTAMT                TYPE CHAR15,
+              STATEGSTTYPE                 TYPE CHAR15,
+              STATEGSTPERORAMT             TYPE CHAR15,
+              STATEGSTAMT                  TYPE CHAR15,
+              FREIGHTCENTRALGSTTYPE        TYPE CHAR15,
+              FREIGHTCENTRALGSTPERORAMT    TYPE CHAR15,
+              FREIGHTCENTRALGSTAMT         TYPE CHAR15,
+              FREIGHTSTATEGSTTYPE          TYPE CHAR15,
+              FREIGHTSTATEGSTPERORAMT      TYPE CHAR15,
+              FREIGHTSTATEGSTAMT           TYPE CHAR15,
+              FREIGHTINTERSTATEGSTTYPE     TYPE CHAR15,
+              FREIGHTINTERSTATEGSTPERORAMT TYPE CHAR15,
+              FREIGHTINTERSTATEGSTAMT      TYPE CHAR15,
+              TCS                          TYPE CHAR15,
+              ROUDINGOFFTYPE               TYPE CHAR15,
+              ROUDINGOFFPERORAMT           TYPE CHAR15,
+              ROUDINGOFFAMT                TYPE CHAR15,
+              DOCUMENTCONDITION            TYPE KNUMV,
+              ORDERQTY                     TYPE CHAR15,
+              ROUNDQTY                     TYPE CHAR15,
+              CONFIRMEDQTY                 TYPE CHAR15,
+              CUSTOMERREFERENCE            TYPE CHAR10,
+              CUSTOMERREFERENCEDATE        TYPE CHAR10,
+              PURCHASEORDERNO              TYPE AUFNR,
+              PURCHASEORDERDATE            TYPE CHAR10,
+              DELIVERYSTATUS               TYPE CHAR20,
+              ITEM1                        TYPE CHAR6,
+              DELIVERYITEM                 TYPE CHAR20,
+              BILLINGITEM                  TYPE CHAR20,
+              SALESAREA                    TYPE VKORG,
+              ORDERTYPE                    TYPE AUART,
+              SALESOFFICE                  TYPE VKBUR,
+              SALESGROUP                   TYPE VKGRP,
+              CREATEDBY                    TYPE ERNAM,
+              CREATEDONANDTIME             TYPE CHAR20,
+              PRICEPROCEDURE               TYPE KALSM_D,
+              PRICEPROCEDUREDESC           TYPE CHAR40,
+*              CUSTPRICEGROUP1              TYPE CHAR20,
+              TELEPHONENUMBER              TYPE CHAR10,
+              CHANGEDBY                    TYPE ERNAM,
+              CHANGEDONANDTIME             TYPE CHAR20,
+              OVERALLSTATUS1               TYPE CHAR20,
+              REJECTIONSTATUS              TYPE CHAR20,
+              DELIVERYSTATUS1              TYPE CHAR20,
+              OVERALLCREDSTATUS            TYPE CHAR20,
+              OVERALLBLOCKSTATUS           TYPE CHAR20,
+              OVERALLDELIVSTATUS           TYPE CHAR20,
+              OVERALLHEADER                TYPE CHAR20,
+              DELIVERYHEADER               TYPE CHAR20,
+              BILLINGHEADER                TYPE CHAR20,
+              ALLITEM                      TYPE CHAR20,
+              DELIVERYALLITEM              TYPE CHAR20,
+              BILLINGALLITEM               TYPE CHAR20,
+*              PRICPROCEDURE                TYPE KALSMASD,
+              FORMHEADER                   TYPE STRING,
+              SHIPPINGMARKS                TYPE STRING,
+              MODEOFTRANSPORT              TYPE STRING,
+              PORTOFDISCHARGE              TYPE STRING,
+              FINALDESTINATION             TYPE STRING,
+              FOREGINCURRENCY              TYPE STRING,
+              INSURANCE                    TYPE STRING,
+              ORGINOFGOODS                 TYPE STRING,
+              PACKINGDETAILS1              TYPE STRING,
+              PACKINGDETAILS2              TYPE STRING,
+            END OF TY_STRU.
+
+
+    DATA : IT_FINAL TYPE TABLE OF TY_STRU,
+           WA_FINAL TYPE TY_STRU.
+
+
+
+    CALL METHOD ME->GET_USERDETAILS
+      EXPORTING
+        SERVER   = SERVER         " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        FROMDATE = DATA(F_DATE)         " ABAP system field: Current date of application server
+        TODATE   = DATA(T_DATE).         " ABAP system field: Current date of application server
+
+
+    DATA : S_DATE TYPE RANGE OF SY-DATUM.
+
+    DATA : LT_LINES  TYPE STANDARD TABLE OF TLINE,
+           LV_STRING TYPE STRING,
+           LV_VBELN  TYPE  THEAD-TDNAME.
+
+    DATA : GS_JSON TYPE STRING.
+
+    APPEND VALUE #( SIGN = 'I'  OPTION = 'BT'  LOW = F_DATE HIGH = T_DATE ) TO S_DATE.
+
+
+
+    SELECT A~VBELN       AS DOMESTICORDER,
+           A~KUNNR       AS SOLDTOPARTY,
+           A~KUNNR       AS SHIPTOPARTY,
+           B~NAME1       AS SOLDANDSHIPTOPARTYNAME,
+           C~BSTKD       AS CUSTREFERENCE,
+           CAST( A~NETWR AS CHAR )       AS NETVALUE,
+           C~BSTDK       AS CUSTREFDATE,
+           A~VDATU       AS REQDELIVDATE,
+           C~ZTERM       AS PYTTERMS,
+           C~ZTERM       AS PAYMENTTERMS,
+           N~VTEXT       AS PYTTERMSDESC,
+           C~INCOV       AS INCOVERSION,
+           C~INCO1       AS INCOTERMS,
+           C~INCO2_L     AS INCOLOCATION1,
+           C~PRSDT       AS PRICINGDATE,
+           C~KZAZU       AS ORDERCOMBINAT,
+           C~BZIRK       AS SALESDISTRICT,
+           P~BZTXT       AS SALESDISTRICTDESC,
+           CAST( D~BRGEW AS CHAR )       AS TOTALWEIGHT,
+           D~GEWEI       AS UOM,
+           D~ABGRU       AS REASONFORREJECTION,
+           A~AUTLF       AS COMPLETEDLV,
+           A~LIFSK       AS DELIVERYBLOCK,
+           A~FAKSK       AS BILLINGBLOCK,
+           D~POSNR       AS ITEM,
+           D~POSNR       AS ITEM1,
+           D~MATNR       AS MATERIAL,
+           E~MAKTX       AS ITEMDESCRIPTION,
+           D~KWMENG      AS ORDERQUANTITY,
+           D~VRKME       AS SALESUOM,
+           D~KDMAT       AS CUSTOMERMATERIALNUMBER,
+           D~PSTYV       AS ITEMCATEGORY,
+           D~WERKS       AS PLANT,
+           D~NETPR       AS ITEMNETPRICE,
+           D~WAERK       AS CURRENCY,
+           D~NETWR       AS ITEMNETVALUE,
+           D~PRCTR       AS PROFITCENTER,
+           D~POSNR       AS SALEDOCUMENTITEM,
+           D~MATKL       AS MATERIALGROUP,
+           D~FKDAT_ANA   AS FIRSTDATE,
+           D~CMPRE       AS AMOUNT,
+           D~GBSTA       AS OVERALLSTATUS,
+           D~GBSTA       AS OVERALLSTATUS1,
+           D~LFGSA       AS OVERALLDELIVSTATUS,
+           F~WGBEZ       AS MATERIALGROUPNAME,
+           D~SPART       AS DIVISON,
+*           C~PLTYP       AS PRICELISTTYPE,
+           G~PTEXT       AS PRICELISTTYPE,
+           H~KTEXT       AS CUSTOMERGROUP,
+           D~VSTEL       AS SHIPPINGPOINT,
+           D~LGORT       AS STORLOCATION,
+           L~LGOBE       AS STORLOCATIONDESC,
+           J~WMENG       AS ORDERQTY,
+           J~CMENG       AS ROUNDQTY,
+           J~BMENG       AS CONFIRMEDQTY,
+           C~BSTKD       AS CUSTOMERREFERENCE1,
+           C~BSTDK       AS CUSTREFDATE1,
+           C~BSTKD_E     AS PURCHASEORDERNO,
+           C~BSTDK_E     AS PURCHASEORDERDATE,
+           I~LFSTK       AS DELIVERYSTATUS,
+           I~UVALL       AS ITEMCOMPLETENESS,
+           I~UVVLK       AS DELIVERYITEM,
+           I~UVFAK       AS BILLINGITEM,
+           A~VKORG       AS SALESAREA,
+           A~AUART       AS ORDERTYPE,
+           A~VKBUR       AS SALESOFFICE,
+           A~VKGRP       AS SALESGROUP,
+           A~ERNAM       AS CREATEDBY,
+           A~ERDAT       AS CREATEDON,
+           A~ERZET       AS CREATEDTIME,
+           A~KALSM       AS PRICEPROCEDURE,
+           K~VTEXT       AS PRICEPROCEDUREDESC,
+           C~KONDA       AS CUSTPRICEGROUP,
+           M~VTEXT       AS CUSTPRICEGROUPDESC,
+           A~TELF1       AS TELEPHONENUMBER,
+           I~LFSTK       AS DELIVERYSTATUS1,
+           I~UVALL       AS OVERALLHEADER,
+           I~UVVLK       AS DELIVERYHEADER,
+           I~UVFAK       AS BILLINGHEADER,
+           I~UVALS       AS ALLITEM,
+           I~UVVLS       AS DELIVERYALLITEM,
+           I~UVFAS       AS BILLINGALLITEM,
+           A~KNUMV       AS DOCUMENTCONDITION,
+           O~KSCHL       AS CONDITIONTYPE
+*           ( D~KWMENG - Q~LFIMG ) AS PENDINGQUANTITY
+
+
+
+         FROM VBAK AS A
+         LEFT OUTER JOIN KNA1 AS B
+         ON ( A~KUNNR = B~KUNNR )
+         LEFT OUTER JOIN VBKD AS C
+         ON ( A~VBELN = C~VBELN )
+         LEFT OUTER JOIN VBAP AS D
+         ON ( A~VBELN = D~VBELN )
+         LEFT OUTER JOIN MAKT AS E
+         ON ( D~MATNR = E~MATNR )
+         LEFT OUTER JOIN T023T AS F
+         ON ( D~MATKL = F~MATKL )
+         LEFT OUTER JOIN T189T AS G
+         ON ( C~PLTYP = G~PLTYP AND G~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T151T AS H
+         ON ( C~KDGRP = H~KDGRP AND H~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T001L AS L
+         ON ( D~LGORT = L~LGORT )
+         LEFT OUTER JOIN VBAKUK AS I
+         ON ( A~VBELN = I~VBELN )
+         LEFT OUTER JOIN VBEP AS J
+         ON ( A~VBELN = J~VBELN AND D~POSNR = J~POSNR )
+         LEFT OUTER JOIN T683U AS K
+         ON ( A~KALSM = K~KALSM AND K~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T188T AS M
+         ON ( C~KONDA = M~KONDA AND M~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN TVZBT AS N
+         ON ( C~ZTERM = N~ZTERM AND M~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN KONH AS O
+         ON ( D~KNUMV_ANA = O~KNUMH )
+         LEFT OUTER JOIN T171T AS P
+         ON ( C~BZIRK = P~BZIRK )
+*         LEFT OUTER JOIN LIPS AS Q
+*         ON ( D~VBELN = Q~VGBEL AND D~POSNR = Q~VGPOS )
+         INTO TABLE @DATA(IT_TABLE)
+         WHERE A~AUDAT IN @S_DATE AND A~AUART <> 'ZQT' AND A~AUART <> 'ZEQT'.      " AND a~vbeln = '0000514324'.
+
+*    IT_FINAL = VALUE #( FOR WA_TABLE IN IT_TABLE
+
+
+    IT_FINAL = CORRESPONDING #( IT_TABLE ).
+
+
+    LOOP AT IT_FINAL ASSIGNING FIELD-SYMBOL(<WA_FINAL>).
+
+      DATA(LS_REDTA) = IT_TABLE[ DOMESTICORDER = <WA_FINAL>-DOMESTICORDER ].
+
+      SELECT SUM( LFIMG ) FROM LIPS INTO @DATA(WA_LFIMG) WHERE VGBEL = @<WA_FINAL>-DOMESTICORDER AND VGPOS = @<WA_FINAL>-SALEDOCUMENTITEM.
+      <WA_FINAL>-DELIVERYQUANTITY = WA_LFIMG.
+      <WA_FINAL>-PENDINGQUANTITY = <WA_FINAL>-ORDERQUANTITY - WA_LFIMG.
+
+
+      <WA_FINAL>-CREATEDONANDTIME = |{ LS_REDTA-CREATEDON } & { LS_REDTA-CREATEDTIME+0(2) }:{ LS_REDTA-CREATEDTIME+2(2) }:{ LS_REDTA-CREATEDTIME+4(2) }|.
+
+      <WA_FINAL>-ITEMNETPRICE = <WA_FINAL>-ITEMNETPRICE / 100.
+      <WA_FINAL>-NETVALUE = <WA_FINAL>-NETVALUE / 100.
+      <WA_FINAL>-ITEMNETVALUE = <WA_FINAL>-ITEMNETVALUE / 100.
+      <WA_FINAL>-AMOUNT = <WA_FINAL>-AMOUNT / 100.
+
+
+      IF <WA_FINAL>-DELIVERYSTATUS = 'C'.
+        <WA_FINAL>-DELIVERYSTATUS  = 'Completed'.
+        <WA_FINAL>-DELIVERYSTATUS1 = 'Completed'.
+      ENDIF.
+
+      IF <WA_FINAL>-DELIVERYITEM = 'C'.
+        <WA_FINAL>-DELIVERYITEM  = 'Completed'.
+        <WA_FINAL>-DELIVERYITEM = 'Completed'.
+      ENDIF.
+
+      IF <WA_FINAL>-BILLINGITEM = 'C'.
+        <WA_FINAL>-BILLINGITEM  = 'Completed'.
+        <WA_FINAL>-BILLINGITEM = 'Completed'.
+      ENDIF.
+
+      IF <WA_FINAL>-OVERALLSTATUS = 'C'.
+        <WA_FINAL>-OVERALLSTATUS  = 'Completed'.
+        <WA_FINAL>-OVERALLSTATUS = 'Completed'.
+      ENDIF.
+
+      IF <WA_FINAL>-OVERALLSTATUS1 = 'C'.
+        <WA_FINAL>-OVERALLSTATUS1  = 'Completed'.
+        <WA_FINAL>-OVERALLSTATUS1 = 'Completed'.
+      ENDIF.
+
+      IF <WA_FINAL>-OVERALLDELIVSTATUS = 'C'.
+        <WA_FINAL>-OVERALLDELIVSTATUS  = 'Completed'.
+        <WA_FINAL>-OVERALLDELIVSTATUS = 'Completed'.
+      ENDIF.
+
+
+
+      SELECT SINGLE BEZEI FROM TVBST INTO <WA_FINAL>-OVERALLHEADER  WHERE FDNAM = 'UVALL' AND STATU = <WA_FINAL>-OVERALLHEADER AND SPRAS = SY-LANGU.
+      SELECT SINGLE BEZEI FROM TVBST INTO <WA_FINAL>-DELIVERYHEADER  WHERE FDNAM = 'UVVLK' AND STATU = <WA_FINAL>-DELIVERYHEADER AND SPRAS = SY-LANGU.
+      SELECT SINGLE BEZEI FROM TVBST INTO <WA_FINAL>-BILLINGHEADER  WHERE FDNAM = 'UVFAK' AND STATU = <WA_FINAL>-BILLINGHEADER AND SPRAS = SY-LANGU.
+      SELECT SINGLE BEZEI FROM TVBST INTO <WA_FINAL>-ALLITEM  WHERE FDNAM = 'UVALS' AND STATU = <WA_FINAL>-ALLITEM AND SPRAS = SY-LANGU.
+      SELECT SINGLE BEZEI FROM TVBST INTO <WA_FINAL>-DELIVERYALLITEM  WHERE FDNAM = 'UVVLS' AND STATU = <WA_FINAL>-DELIVERYALLITEM AND SPRAS = SY-LANGU.
+      SELECT SINGLE BEZEI FROM TVBST INTO <WA_FINAL>-BILLINGALLITEM  WHERE FDNAM = 'UVFAS' AND STATU = <WA_FINAL>-BILLINGALLITEM AND SPRAS = SY-LANGU.
+
+      SELECT SINGLE BEZEI FROM TVAGT INTO <WA_FINAL>-REASONFORREJECTION WHERE ABGRU = <WA_FINAL>-REASONFORREJECTION AND SPRAS = SY-LANGU.
+
+      SELECT SUM( BRGEW ) FROM VBAP INTO @DATA(TOTALWEIGHT) WHERE VBELN = @<WA_FINAL>-DOMESTICORDER.
+      <WA_FINAL>-TOTALWEIGHT = TOTALWEIGHT.
+
+
+
+      SELECT KSCHL,KWERT,KBETR FROM PRCD_ELEMENTS INTO TABLE @DATA(IT_PRCD) WHERE KNUMV = @<WA_FINAL>-DOCUMENTCONDITION AND KPOSN = @<WA_FINAL>-ITEM.
+
+      LOOP AT IT_PRCD INTO DATA(WA_PRCD).
+        CASE WA_PRCD-KSCHL.
+
+          WHEN 'ZCDS'.
+            <WA_FINAL>-CUSTOMERDISCOUNTTYPE            = WA_PRCD-KSCHL.
+            <WA_FINAL>-CUSTOMERDISCOUNTPERORAMT        = WA_PRCD-KBETR.
+            <WA_FINAL>-CUSTOMERDISCOUNTAMT             = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZSDS'.
+            <WA_FINAL>-SCHEMADISCOUNTTYPE              = WA_PRCD-KSCHL.
+            <WA_FINAL>-SCHEMADISCOUNTPERORAMT          = WA_PRCD-KBETR.
+            <WA_FINAL>-SCHEMADISCOUNTAMT               = WA_PRCD-KWERT / 100.
+
+          WHEN 'PR00'.
+            <WA_FINAL>-PRICETYPE                       = WA_PRCD-KSCHL.
+            <WA_FINAL>-PRICEPERORAMT                   = WA_PRCD-KBETR.
+            <WA_FINAL>-PRICEAMT                        = WA_PRCD-KWERT / 100.
+
+          WHEN 'JOIG'.
+            <WA_FINAL>-INTERSTATEGSTTYPE               = WA_PRCD-KSCHL.
+            <WA_FINAL>-INTERSTATEGSTPERORAMT           = WA_PRCD-KBETR.
+            <WA_FINAL>-INTERSTATEGSTAMT                = WA_PRCD-KWERT / 100.
+
+          WHEN 'JOCG'.
+            <WA_FINAL>-CENTRALGSTTYPE                  = WA_PRCD-KSCHL.
+            <WA_FINAL>-CENTRALGSTPERORAMT              = WA_PRCD-KBETR.
+            <WA_FINAL>-CENTRALGSTAMT                   = WA_PRCD-KWERT / 100.
+
+          WHEN 'JOSG'.
+            <WA_FINAL>-STATEGSTTYPE                    = WA_PRCD-KSCHL.
+            <WA_FINAL>-STATEGSTPERORAMT                = WA_PRCD-KBETR.
+            <WA_FINAL>-STATEGSTAMT                     = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZFSG'.
+            <WA_FINAL>-FREIGHTSTATEGSTTYPE             = WA_PRCD-KSCHL.
+            <WA_FINAL>-FREIGHTSTATEGSTPERORAMT         = WA_PRCD-KBETR.
+            <WA_FINAL>-FREIGHTSTATEGSTAMT              = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZFCG'.
+            <WA_FINAL>-FREIGHTCENTRALGSTTYPE           = WA_PRCD-KSCHL.
+            <WA_FINAL>-FREIGHTCENTRALGSTPERORAMT       = WA_PRCD-KBETR.
+            <WA_FINAL>-FREIGHTCENTRALGSTAMT            = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZFIG'.
+            <WA_FINAL>-FREIGHTINTERSTATEGSTTYPE        = WA_PRCD-KSCHL.
+            <WA_FINAL>-FREIGHTINTERSTATEGSTPERORAMT    = WA_PRCD-KBETR.
+            <WA_FINAL>-FREIGHTINTERSTATEGSTAMT         = WA_PRCD-KWERT / 100.
+
+
+          WHEN 'ZROF'.
+            <WA_FINAL>-ROUDINGOFFTYPE                  = WA_PRCD-KSCHL.
+            <WA_FINAL>-ROUDINGOFFPERORAMT              = WA_PRCD-KBETR.
+            <WA_FINAL>-ROUDINGOFFAMT                   = WA_PRCD-KWERT / 100.
+
+        ENDCASE.
+
+      ENDLOOP.
+
+
+
+
+      """"""""""""""""""""""""""" Form Header """"""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = '0001'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES01>).
+          CONCATENATE  LV_STRING <LS_LINES01>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-FORMHEADER = LV_STRING.
+
+      """""""""""""""""" Shipping Marks """""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE01'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES02>).
+          CONCATENATE  LV_STRING <LS_LINES02>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-SHIPPINGMARKS = LV_STRING.
+
+      """""""""""""""" Mode of Transport """""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE02'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES03>).
+          CONCATENATE  LV_STRING <LS_LINES03>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-MODEOFTRANSPORT = LV_STRING.
+
+      """""""""""""""""""" Port of Discharge """"""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE03'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES04>).
+          CONCATENATE  LV_STRING <LS_LINES04>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-PORTOFDISCHARGE = LV_STRING.
+
+      """""""""""""""""""" Final Destination """"""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE04'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES05>).
+          CONCATENATE  LV_STRING <LS_LINES05>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-FINALDESTINATION = LV_STRING.
+
+      """""""""""""""""""" Foreign Currency """"""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE05'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES06>).
+          CONCATENATE  LV_STRING <LS_LINES06>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-FOREGINCURRENCY = LV_STRING.
+
+      """""""""""""""""""" Insurance """"""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE07'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES07>).
+          CONCATENATE  LV_STRING <LS_LINES07>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-INSURANCE = LV_STRING.
+
+      """""""""""""""""""" Origin of Goods """"""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE08'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES08>).
+          CONCATENATE  LV_STRING <LS_LINES08>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-ORGINOFGOODS = LV_STRING.
+
+      """""""""""""""""""" Packing Details 1 """"""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE09'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES09>).
+          CONCATENATE  LV_STRING <LS_LINES09>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-PACKINGDETAILS1 = LV_STRING.
+
+
+      """""""""""""""""""" Packing Details 2 """"""""""""""""""""""""
+
+      LV_VBELN = <WA_FINAL>-DOMESTICORDER.
+
+      CLEAR LV_STRING.
+      REFRESH LT_LINES.
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          CLIENT                  = SY-MANDT
+          ID                      = 'ZE10'
+          LANGUAGE                = SY-LANGU
+          NAME                    = LV_VBELN
+          OBJECT                  = 'VBBK'
+        TABLES
+          LINES                   = LT_LINES
+        EXCEPTIONS
+          ID                      = 1
+          LANGUAGE                = 2
+          NAME                    = 3
+          NOT_FOUND               = 4
+          OBJECT                  = 5
+          REFERENCE_CHECK         = 6
+          WRONG_ACCESS_TO_ARCHIVE = 7
+          OTHERS                  = 8.
+      IF SY-SUBRC = 0.
+        LOOP AT LT_LINES ASSIGNING FIELD-SYMBOL(<LS_LINES10>).
+          CONCATENATE  LV_STRING <LS_LINES10>-TDLINE  INTO LV_STRING .
+        ENDLOOP.
+      ENDIF.
+
+      <WA_FINAL>-PACKINGDETAILS2 = LV_STRING.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-DOMESTICORDER
+        IMPORTING
+          OUTPUT = <WA_FINAL>-DOMESTICORDER.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-MATERIAL
+        IMPORTING
+          OUTPUT = <WA_FINAL>-MATERIAL.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-PROFITCENTER
+        IMPORTING
+          OUTPUT = <WA_FINAL>-PROFITCENTER.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-ITEM
+        IMPORTING
+          OUTPUT = <WA_FINAL>-ITEM.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-ITEM1
+        IMPORTING
+          OUTPUT = <WA_FINAL>-ITEM1.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-DOCUMENTCONDITION
+        IMPORTING
+          OUTPUT = <WA_FINAL>-DOCUMENTCONDITION.
+
+      CONDENSE : <WA_FINAL>-PENDINGQUANTITY.
+      CLEAR : WA_LFIMG.
+
+    ENDLOOP.
+
+
+
+
+
+    GS_JSON = /UI2/CL_JSON=>SERIALIZE(
+              DATA             = IT_FINAL
+*              compress         = abap_true
+*              name             =
+              PRETTY_NAME      = /UI2/CL_JSON=>PRETTY_MODE-CAMEL_CASE
+          ) .
+
+    SERVER->RESPONSE->SET_CDATA(
+      EXPORTING
+        DATA   =  GS_JSON   " Character data
+*              offset = 0    " Offset into character data
+*              length = -1    " Length of character data
+    ).
+
+
+
+
+
+
+
+  ENDMETHOD.
