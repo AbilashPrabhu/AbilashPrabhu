@@ -1,0 +1,612 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+
+    CALL METHOD ME->GET_USERDETAILS
+      EXPORTING
+        SERVER   = SERVER           " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        FROMDATE = DATA(F_DATE)           " ABAP system field: Current date of application server
+        TODATE   = DATA(T_DATE).           " ABAP system field: Current date of application server
+
+
+    TYPES : BEGIN OF TY_STRU,
+              DOCUMENTTYPE                 TYPE FKART,
+              DOCUMENTNUM                  TYPE VBELN,
+              PAYER                        TYPE KUNRG,
+              BILLINGDATE                  TYPE CHAR10,
+              NETVALUE                     TYPE CHAR15,
+              CURRENCY                     TYPE WAERS,
+              CREATEDBY                    TYPE CHAR10,
+              CREATEDONDATETIME            TYPE CHAR20,
+              COMPANYCODE                  TYPE BUKRS,
+              REFERENCE                    TYPE XBLNR,
+              ASSIGNMENT                   TYPE ORDNR_V,
+              ACCTASSMTGRPCUST             TYPE CHAR30,
+              POSTINGSTATUS                TYPE CHAR100,
+              EXCHANGRATE                  TYPE CHAR20,
+              DUNNINGBLOCK                 TYPE CHAR50,
+              PRICELISTTYPE                TYPE CHAR20,
+              CUSTOMERPRICEGROUP           TYPE CHAR20,
+              PAYMENTTERMS                 TYPE DZTERM,
+              PAYMENTTERMSDESC             TYPE CHAR20,
+              PAYMENTVERSION               TYPE CHAR20,
+              INCOTERMSLOCATION1           TYPE CHAR20,
+              PRICINGPROCEDURE             TYPE KALSM_D,
+              PRICINGPROCEDUREDESC         TYPE CHAR30,
+              DESTCOUNTRYREGION            TYPE CHAR20,
+              TAXCLASSCUST                 TYPE CHAR10,
+              COUNTRYREGN                  TYPE CHAR10,
+*              OriginSalesTaxNo             type
+*              BusinessPlace                type
+              SALESORG                     TYPE VKORG,
+              SALESORGDESC                 TYPE CHAR15,
+              DISTRIBUTIONCHANNEL          TYPE VTWEG,
+              DISTRIBUTIONCHANNELDESC      TYPE CHAR15,
+              DIVISION                     TYPE SPART,
+              DIVISIONDESC                 TYPE CHAR15,
+              SALESDISTRICT                TYPE BZIRK,
+              SALESDISTRICTDESC            TYPE CHAR50,
+              SHIPPINGCONDITIONS           TYPE CHAR20,
+              INVLISTTYPE                  TYPE CHAR20,
+              SOLDTOPARTY                  TYPE KUNAG,
+              ASSIGNEDBP                   TYPE KUNAG,
+              NAME                         TYPE CHAR20,
+              SHIPTOPARTY                  TYPE KUNWE,
+              ASSIGNEDBP1                  TYPE KUNWE,
+              NAME1                        TYPE CHAR20,
+              PAYER1                       TYPE KUNRG,
+              ASSIGNEDBP2                  TYPE KUNRG,
+              NAME2                        TYPE CHAR20,
+              NET                          TYPE CHAR20,
+              TAX                          TYPE CHAR15,
+              CUSTOMERDISCOUNTTYPE         TYPE KSCHA,
+              CUSTOMERDISCOUNTPERORAMT     TYPE CHAR15,
+              CUSTOMERDISCOUNTAMT          TYPE CHAR15,
+              SCHEMADISCOUNTTYPE           TYPE CHAR15,
+              SCHEMADISCOUNTPERORAMT       TYPE CHAR15,
+              SCHEMADISCOUNTAMT            TYPE CHAR15,
+              CASHDISCOUNTMANUTYPE         TYPE CHAR15,
+              CASHDISCOUNTMANUPERORAMT     TYPE CHAR15,
+              CASHDISCOUNTMANUAMT          TYPE CHAR15,
+              MNPRICETYPE                  TYPE CHAR15,
+              MNPRICEPERORAMT              TYPE CHAR15,
+              MNPRICEDISCOUNTAMT           TYPE CHAR15,
+              PRICETYPE                    TYPE CHAR15,
+              PRICEPERORAMT                TYPE CHAR15,
+              PRICEAMT                     TYPE CHAR15,
+              CASHDISCOUNT                 TYPE CHAR15,
+              INTERSTATEGSTTYPE            TYPE CHAR15,
+              INTERSTATEGSTPERORAMT        TYPE CHAR15,
+              INTERSTATEGSTAMT             TYPE CHAR15,
+              CENTRALGSTTYPE               TYPE CHAR15,
+              CENTRALGSTPERORAMT           TYPE CHAR15,
+              CENTRALGSTAMT                TYPE CHAR15,
+              STATEGSTTYPE                 TYPE CHAR15,
+              STATEGSTPERORAMT             TYPE CHAR15,
+              STATEGSTAMT                  TYPE CHAR15,
+              FREIGHTCENTRALGSTTYPE        TYPE CHAR15,
+              FREIGHTCENTRALGSTPERORAMT    TYPE CHAR15,
+              FREIGHTCENTRALGSTAMT         TYPE CHAR15,
+              FREIGHTSTATEGSTTYPE          TYPE CHAR15,
+              FREIGHTSTATEGSTPERORAMT      TYPE CHAR15,
+              FREIGHTSTATEGSTAMT           TYPE CHAR15,
+              FREIGHTINTERSTATEGSTTYPE     TYPE CHAR15,
+              FREIGHTINTERSTATEGSTPERORAMT TYPE CHAR15,
+              FREIGHTINTERSTATEGSTAMT      TYPE CHAR15,
+              TCSTYPE                      TYPE CHAR15,
+              TCSPERORAMT                  TYPE CHAR15,
+              TCSAMT                       TYPE CHAR15,
+              ROUDINGOFFTYPE               TYPE CHAR15,
+              ROUDINGOFFPERORAMT           TYPE CHAR15,
+              ROUDINGOFFAMT                TYPE CHAR15,
+              DESCRIPTION                  TYPE CHAR15,
+              AMOUNT                       TYPE CHAR15,
+              CONDITIONVALUE               TYPE CHAR15,
+*              Statistical                  type
+*              AlltxtTy                     type
+              TRANSPORTATIONMODE           TYPE ZINV_TRANS_MODE,
+              VEHICLETYPE                  TYPE ZINV_VH_TYPE,
+              TRANSPORTVENDOR              TYPE ZTRANS,
+              TRANSPORTERGST               TYPE ZTRANS_ID,
+              VEHICLENUMBER                TYPE ZVEHL,
+              LRNUMBER                     TYPE ZLRNO,
+              LRDATE                       TYPE CHAR10,
+              GSTREFERENCE                 TYPE ZZGSTREFERENCE,
+              ACKNOWLEDGEMENTDATE          TYPE CHAR10,
+              ACKNOWLEDGEMENTNO            TYPE ZSD_ACKNO,
+              IRNNUMBER                    TYPE ZSD_EINVOICE_NO,
+              EWAYBILL                     TYPE ZEWAY,
+              ITEM                         TYPE CHAR6,
+              ITEMCATEGORY                 TYPE PSTYV,
+              MATERIAL                     TYPE MATNR,
+              MATERIALNAME                 TYPE MAKTX,
+              BILLEDQUANTITY               TYPE CHAR15,
+              BILLQTYINSKU                 TYPE MEINS,
+*              QtyConversion                type
+              PLANT                        TYPE WERKS_D,
+              STORAGELOCATION              TYPE LGORT_D,
+              STORAGELOCATIONDESC          TYPE CHAR25,
+              SALESDOCUMENT                TYPE VBELN_VA,
+              REFERENCEDOC                 TYPE VGBEL,
+              PRICINGDATE                  TYPE CHAR10,
+              SERVRENDDATE                 TYPE CHAR10,
+              EXCHANGRATE1                 TYPE CHAR15,
+              MANUALPRICE                  TYPE CHAR50,
+              PRICING                      TYPE CHAR50,
+              STATVALUE                    TYPE KOWRR,
+              RETURNS                      TYPE CHAR15,
+              MATERIALGROUP                TYPE CHAR15,
+*              Cashdiscount                 type char15,
+              COUNTRYREGION                TYPE CHAR15,
+              BUSINESSPLACE                TYPE CHAR15,
+              ACCTASSMTGRPMAT              TYPE CHAR15,
+              TAXCLASSMAT                  TYPE CHAR15,
+              CASHDISCOUNTBASE             TYPE CHAR15,
+              REGIONDELIVERYPLANT          TYPE CHAR15,
+              DESTCOUNTRYREGION1           TYPE CHAR10,
+              REGIONORDER                  TYPE CHAR10,
+              SALESORG1                    TYPE CHAR10,
+              DISTRIBUTIONCHANNEL1         TYPE CHAR10,
+              DIVISION1                    TYPE CHAR10,
+              SALESDISTRICTORDER           TYPE CHAR10,
+              SALESGROUP                   TYPE VKGRP,
+              SALESGROUPDESC               TYPE CHAR20,
+              SALESOFFICE                  TYPE CHAR10,
+              CUSTOMERGROUPORDER           TYPE CHAR10,
+              PRICEGROUPORDER              TYPE CHAR10,
+              PRICELISTORDER               TYPE CHAR20,
+              MATERIALENTERED              TYPE CHAR40,
+              TELEPHONE                    TYPE CHAR10,
+              CUSTOMERMATERIAL             TYPE CHAR10,
+              DOCUMENTCONDITION            TYPE KNUMV,
+              DOMESTICORDER                TYPE CHAR10,
+              DATEANDTIME                  TYPE CHAR20,
+*              PickingRequest               TYPE char10,
+*              dateandtime1                 TYPE char20,
+*              GDgoodsissueDelivery         TYPE char10,
+*              dateandtime2                 TYPE char20,
+              DOMESTICINVOICE              TYPE CHAR10,
+              DATEANDTIME3                 TYPE CHAR20,
+              JOURNALENTRY                 TYPE CHAR10,
+              DATEANDTIME4                 TYPE CHAR20,
+              SALEORDER                    TYPE vbak-vbeln,
+            END OF TY_STRU.
+
+    DATA : IT_FINAL TYPE TABLE OF TY_STRU,
+           WA_FINAL TYPE TY_STRU.
+
+    DATA : GS_JSON TYPE STRING.
+
+
+    DATA : S_DATE TYPE RANGE OF SY-DATUM.
+
+    APPEND VALUE #( SIGN = 'I'  OPTION = 'BT'  LOW = F_DATE  HIGH = T_DATE ) TO S_DATE.
+
+
+    SELECT A~VBELN           AS DOCUMENTNUM,
+           A~VBELN           AS DOMESTICINVOICE,
+           A~FKART           AS DOCUMENTTYPE,
+           A~KUNRG           AS PAYER,
+           A~FKDAT           AS BILLINGDATE,
+           A~NETWR           AS NETVALUE,
+           A~NETWR           AS NET,
+           A~MWSBK           AS TAX,
+           A~WAERK           AS CURRENCY,
+           A~ERNAM           AS CREATEDBY,
+           A~ERDAT           AS CREATEDON,
+           A~ERZET           AS CREATEDTIME,
+           A~BUKRS           AS COMPANYCODE,
+           A~XBLNR           AS REFERENCE,
+           A~XBLNR           AS DOMESTICORDER,
+           A~ZUONR           AS ASSIGNMENT,
+           L~VTEXT           AS ACCTASSMTGRPCUST,
+           A~RFBSK           AS POSTINGSTATUS,
+           N~PTEXT           AS PRICELISTTYPE,
+           A~KONDA           AS CUSTOMERPRICEGROUP,
+           A~ZTERM           AS PAYMENTTERMS,
+           O~VTEXT           AS PAYMENTTERMSDESC,
+           A~INCOV           AS INCOTRMSVERSION,
+           A~INCO2_L         AS INCOTERMSLOCATION1,
+           A~KALSM           AS PRICINGPROCEDURE,
+           P~VTEXT           AS PRICINGPROCEDUREDESC,
+           A~VKORG           AS SALESORG,
+           A~VTWEG           AS DISTRIBUTIONCHANNEL,
+           E~VTEXT           AS DISTRIBUTIONCHANNELDESC,
+           A~SPART           AS DIVISION,
+           F~VTEXT           AS DIVISIONDESC,
+           A~BZIRK           AS SALESDISTRICT,
+           G~BZTXT           AS SALESDISTRICTDESC,
+           M~TEXT1           AS DUNNINGBLOCK,
+           A~KUNAG           AS SOLDTOPARTY,
+           A~KUNAG           AS ASSIGNEDBP,
+           A~KUNWE           AS SHIPTOPARTY,
+           A~KUNWE           AS ASSIGNEDBP1,
+           A~KUNRG           AS PAYER1,
+           A~KUNRG           AS ASSIGNEDBP2,
+           Q~NAME1           AS NAME,
+           R~NAME1           AS NAME1,
+           S~NAME1           AS NAME2,
+           A~VSBED           AS SHIPPINGCONDITIONS,
+           A~FKART_RL        AS INVLISTTYPE,
+           A~ZZTRANS_MODE    AS TRANSPORTATIONMODE,
+           A~ZZVT            AS VEHICLETYPE,
+           A~ZZTRANS         AS TRANSPORTVENDOR,
+           A~ZZTRANS_ID      AS TRANSPORTERGST,
+           A~ZZVEHL          AS VEHICLENUMBER,
+           A~ZZLRNO          AS LRNUMBER,
+           A~ZZLRDT          AS LRDATE,
+           A~ZZGSTREFERENCE  AS GSTREFERENCE,
+           A~ZACKDATE        AS ACKNOWLEDGEMENTDATE,
+           A~ZZACK_NO        AS ACKNOWLEDGEMENTNO,
+           A~ZZEINVOICE_NO   AS IRNNUMBER,
+           A~ZZEWAY          AS EWAYBILL,
+           B~POSNR           AS ITEM,
+           B~PSTYV           AS ITEMCATEGORY,
+           B~MATNR           AS MATERIAL,
+           K~MAKTX           AS MATERIALNAME,
+           B~FKIMG           AS BILLEDQUANTITY,
+           B~VRKME           AS BILLQTYINSKU,
+           B~WERKS           AS PLANT,
+           B~LGORT           AS STORAGELOCATION,
+           T~LGOBE           AS STORAGELOCATIONDESC,
+           B~AUBEL           AS SALESDOCUMENT,
+           B~VGBEL           AS REFERENCEDOC,
+           B~PRSDT           AS PRICINGDATE,
+           B~FBUDA           AS SERVRENDDATE,
+           B~KURSK           AS EXCHANGRATE,
+           B~MPROK           AS MANUALPRICE,
+           B~PRSFD           AS PRICING,
+           B~KOWRR           AS STATVALUE,
+           B~SHKZG           AS RETURNS,
+           B~MATKL           AS MATERIALGROUP,
+           B~SKTOF           AS CASHDISCOUNT,
+           B~ALAND           AS COUNTRYREGION,
+           B~GSBER           AS BUSINESSAREA,
+           B~KTGRM           AS ACCTASSMTGRPMAT,
+*           b~KTGRM           AS TaxClassmat,
+           B~SKFBP           AS CASHDISCOUNTBASE,
+           B~WKREG           AS REGIONDELIVERYPLANT,
+           B~LLAND_AUFT      AS DESTCOUNTRYREGION,
+           B~REGIO_AUFT      AS REGIONORDER,
+           B~VKORG_AUFT      AS SALESORG1,
+           B~VTWEG_AUFT      AS DISTRIBUTIONCHANNEL1,
+           B~SPARA           AS DIVISION1,
+           B~BZIRK_AUFT      AS SALESDISTRICTORDER,
+           B~VKGRP           AS SALESGROUP,
+           H~BEZEI           AS SALESGROUPDESC,
+           B~VKBUR           AS SALESOFFICE,
+           B~KDGRP_AUFT      AS CUSTOMERGROUPORDER,
+           I~VTEXT           AS PRICEGROUPORDER,
+           J~PTEXT           AS PRICELISTORDER,
+           B~MATWA           AS MATERIALENTERED,
+           D~TELF1           AS TELEPHONE,
+           C~KDMAT           AS CUSTOMERMATERIAL,
+           B~KNUMV_ANA       AS DOCUMENTCONDITION
+*           c~KDMAT           AS Domesticorder
+
+         FROM VBRK AS A
+         LEFT OUTER JOIN VBRP AS B
+         ON ( A~VBELN = B~VBELN )
+         LEFT OUTER JOIN VBAP AS C
+         ON ( B~AUBEL = C~VBELN AND B~AUPOS = C~POSNR )
+         LEFT OUTER JOIN VBAK AS D
+         ON ( B~AUBEL = D~VBELN )
+         LEFT OUTER JOIN TVTWT AS E
+         ON ( A~VTWEG = E~VTWEG AND E~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN TSPAT AS F
+         ON ( A~SPART = F~SPART AND F~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T171T AS G
+         ON ( A~BZIRK = G~BZIRK AND G~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN TVGRT AS H
+         ON ( B~VKGRP = H~VKGRP AND H~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T188T AS I
+         ON ( B~KONDA_AUFT = I~KONDA AND I~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T189T AS J
+         ON ( B~PLTYP_AUFT = J~PLTYP AND J~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN MAKT AS K
+         ON ( B~MATNR = K~MATNR )
+         LEFT OUTER JOIN TVKTT AS L
+         ON ( A~KTGRD = L~KTGRD AND L~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T040T AS M
+         ON ( A~MANSP = M~MANSP AND M~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T189T AS N
+         ON ( A~PLTYP = N~PLTYP AND N~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN TVZBT AS O
+         ON ( A~ZTERM = O~ZTERM AND O~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN T683U AS P
+         ON ( A~KALSM = P~KALSM AND P~SPRAS = @SY-LANGU )
+         LEFT OUTER JOIN KNA1 AS Q
+         ON ( A~KUNRG = Q~KUNNR )
+         LEFT OUTER JOIN KNA1 AS R
+         ON ( A~KUNWE = R~KUNNR )
+         LEFT OUTER JOIN KNA1 AS S
+         ON ( A~KUNAG = S~KUNNR )
+         LEFT OUTER JOIN T001L AS T
+         ON ( B~LGORT = T~LGORT )
+         INTO TABLE @DATA(IT_VBRK)
+         WHERE A~FKDAT IN @S_DATE.
+        "where a~vbeln IN ( '000001969' )."
+
+
+    IT_FINAL = CORRESPONDING #( IT_VBRK ).
+
+
+    LOOP AT IT_FINAL ASSIGNING FIELD-SYMBOL(<WA_FINAL>).
+
+      IF <WA_FINAL>-NETVALUE IS NOT INITIAL.
+        <WA_FINAL>-NETVALUE = <WA_FINAL>-NETVALUE / 100.
+      ENDIF.
+      IF <WA_FINAL>-NET IS NOT INITIAL.
+        <WA_FINAL>-NET = <WA_FINAL>-NET / 100.
+      ENDIF.
+      IF <WA_FINAL>-CASHDISCOUNT IS NOT INITIAL.
+
+      ENDIF.
+
+
+      DATA(IT_READ) = IT_VBRK[ DOCUMENTNUM = <WA_FINAL>-DOCUMENTNUM  ITEM = <WA_FINAL>-ITEM ].
+
+      <WA_FINAL>-SALESDOCUMENT = IT_READ-SALESDOCUMENT.
+
+*      <WA_FINAL>-CREATEDONDATETIME = |{ IT_READ-CREATEDON } & { IT_READ-CREATEDTIME+0(2) }:{ IT_READ-CREATEDTIME+2(2) }:{ IT_READ-CREATEDTIME+4(2) }|.
+      <WA_FINAL>-CREATEDONDATETIME = |{ IT_READ-CREATEDON } { SPACE } { IT_READ-CREATEDTIME+0(2) }:{ IT_READ-CREATEDTIME+2(2) }:{ IT_READ-CREATEDTIME+4(2) }|.
+
+      SELECT SINGLE TAXK1,TAXK2,TAXK3,TAXK4,TAXK5,TAXK6,TAXK7,TAXK8,TAXK9 FROM VBRK INTO @DATA(WA_TAX0) WHERE VBELN = @<WA_FINAL>-DOCUMENTNUM.
+      SELECT SINGLE TAXM1,TAXM2,TAXM3,TAXM4,TAXM5,TAXM6,TAXM7,TAXM8,TAXM9 FROM VBRP INTO @DATA(WA_TAX1) WHERE VBELN = @<WA_FINAL>-DOCUMENTNUM
+                                                                                                          AND POSNR = @<WA_FINAL>-ITEM.
+
+      <WA_FINAL>-TAXCLASSCUST = |{ WA_TAX0-TAXK1 } { WA_TAX0-TAXK2 } { WA_TAX0-TAXK3 } { WA_TAX0-TAXK4 } { WA_TAX0-TAXK5 } { WA_TAX0-TAXK6 } { WA_TAX0-TAXK7 } { WA_TAX0-TAXK8 } { WA_TAX0-TAXK9 }|.
+
+      <WA_FINAL>-TAXCLASSMAT = |{ WA_TAX1-TAXM1 } { WA_TAX1-TAXM2 } { WA_TAX1-TAXM3 } { WA_TAX1-TAXM4 } { WA_TAX1-TAXM5 } { WA_TAX1-TAXM6 } { WA_TAX1-TAXM7 } { WA_TAX1-TAXM8 } { WA_TAX1-TAXM9 }|.
+
+      SELECT SINGLE BELNR, CPUDT, CPUTM  FROM BKPF INTO ( @<WA_FINAL>-JOURNALENTRY, @DATA(WA_DATE), @DATA(WA_TIME) ) WHERE AWKEY = @<WA_FINAL>-DOCUMENTNUM.
+      <WA_FINAL>-DATEANDTIME4 = |{ WA_DATE } & { WA_TIME+0(2) }:{ WA_TIME+2(2) }:{ WA_TIME+4(2) }|.
+
+      SELECT SINGLE ERDAT,ERZET FROM VBRK INTO ( @DATA(WA_ERDAT), @DATA(WA_ERZET) ) WHERE VBELN = @<WA_FINAL>-DOCUMENTNUM.
+      <WA_FINAL>-DATEANDTIME3 = |{ WA_ERDAT } & { WA_ERZET+0(2) }:{ WA_ERZET+2(2) }:{ WA_ERZET+4(2) }|.
+
+      SELECT SINGLE ERDAT,ERZET FROM VBAK INTO ( @DATA(WA_ERDAT1), @DATA(WA_ERZET1) ) WHERE VBELN = @<WA_FINAL>-DOMESTICORDER.
+      <WA_FINAL>-DATEANDTIME = |{ WA_ERDAT1 } & { WA_ERZET1+0(2) }:{ WA_ERZET1+2(2) }:{ WA_ERZET1+4(2) }|.
+
+      IF <WA_FINAL>-SHIPTOPARTY IS INITIAL.
+        <WA_FINAL>-SHIPTOPARTY = <WA_FINAL>-SOLDTOPARTY.
+        <WA_FINAL>-ASSIGNEDBP1 = <WA_FINAL>-ASSIGNEDBP.
+        <WA_FINAL>-NAME1       = <WA_FINAL>-NAME.
+      ENDIF.
+
+
+      IF <WA_FINAL>-MANUALPRICE = ''.
+        <WA_FINAL>-MANUALPRICE = 'No manual price change'.
+      ELSEIF <WA_FINAL>-MANUALPRICE = 'A'.
+        <WA_FINAL>-MANUALPRICE = 'Manual price change carried out'.
+      ELSEIF <WA_FINAL>-MANUALPRICE = 'B'.
+        <WA_FINAL>-MANUALPRICE = 'Condition manually deleted'.
+      ELSEIF <WA_FINAL>-MANUALPRICE = 'C'.
+        <WA_FINAL>-MANUALPRICE = 'Manual price change released'.
+      ENDIF.
+
+      IF <WA_FINAL>-PRICING = ''.
+        <WA_FINAL>-PRICING = 'No pricing'.
+      ELSEIF <WA_FINAL>-PRICING = 'X'.
+        <WA_FINAL>-PRICING = 'pricing standard'.
+      ELSEIF <WA_FINAL>-PRICING = 'A'.
+        <WA_FINAL>-PRICING = 'Pricing for empties'.
+      ELSEIF <WA_FINAL>-PRICING = 'B'.
+        <WA_FINAL>-PRICING = 'Pricing for free goods (100% discount)'.
+      ENDIF.
+
+      IF <WA_FINAL>-STATVALUE = ''.
+        <WA_FINAL>-STATVALUE = 'System will copy item to header totals'.
+      ELSEIF <WA_FINAL>-STATVALUE = 'X'.
+        <WA_FINAL>-STATVALUE = 'No cumulation - Values cannot be used statistically'.
+      ELSEIF <WA_FINAL>-STATVALUE = 'Y'.
+        <WA_FINAL>-STATVALUE = 'No cumulation - Values can be used statistically'.
+      ENDIF.
+
+      IF <WA_FINAL>-RETURNS = ''.
+        <WA_FINAL>-RETURNS = 'Outbound Message Processing'.
+      ELSEIF <WA_FINAL>-STATVALUE = 'A'.
+        <WA_FINAL>-STATVALUE = 'Outbound - document flow negative'.
+      ELSEIF <WA_FINAL>-STATVALUE = 'B'.
+        <WA_FINAL>-STATVALUE = 'Returns - document flow negative'.
+      ELSEIF <WA_FINAL>-STATVALUE = 'X'.
+        <WA_FINAL>-STATVALUE = 'Returns'.
+      ENDIF.
+
+      IF <WA_FINAL>-SALESORG = '1000'.
+        <WA_FINAL>-SALESORGDESC = 'M.N.Auto'.
+      ENDIF.
+
+      IF <WA_FINAL>-CUSTOMERGROUPORDER = '01'.
+        <WA_FINAL>-CUSTOMERGROUPORDER = 'Industry'.
+      ELSEIF <WA_FINAL>-CUSTOMERGROUPORDER = '02'.
+        <WA_FINAL>-CUSTOMERGROUPORDER = 'Retail'.
+      ENDIF.
+
+      IF <WA_FINAL>-POSTINGSTATUS = ' '.
+        <WA_FINAL>-POSTINGSTATUS = 'Error in Accounting Interface'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'A'.
+        <WA_FINAL>-POSTINGSTATUS = 'Billing document blocked for forwarding to FI'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'B'.
+        <WA_FINAL>-POSTINGSTATUS = 'Journal entry not created (account determination error)'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'C'.
+        <WA_FINAL>-POSTINGSTATUS = 'Journal entry has been created'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'D'.
+        <WA_FINAL>-POSTINGSTATUS = 'Billing document is not relevant for accounting'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'E'.
+        <WA_FINAL>-POSTINGSTATUS = 'Billing document canceled'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'F'.
+        <WA_FINAL>-POSTINGSTATUS = 'Journal entry not created (pricing error)'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'G'.
+        <WA_FINAL>-POSTINGSTATUS = 'Journal entry not created (export data missing)'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'H'.
+        <WA_FINAL>-POSTINGSTATUS = 'Posted via invoice list'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'I'.
+        <WA_FINAL>-POSTINGSTATUS = 'Posted via invoice list (account determination error)'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'K'.
+        <WA_FINAL>-POSTINGSTATUS = 'Journal entry not created (no authorization)'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'L'.
+        <WA_FINAL>-POSTINGSTATUS = 'Billing doc. blocked for transfer to manager (only IS-OIL)'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'M'.
+        <WA_FINAL>-POSTINGSTATUS = 'Analyst Approval refused (only IS-OIL)'.
+      ELSEIF <WA_FINAL>-POSTINGSTATUS = 'N'.
+        <WA_FINAL>-POSTINGSTATUS = 'No Journal entry due to fund management (only IS-PS)'.
+      ENDIF.
+
+
+
+
+
+
+
+
+
+
+
+
+      SELECT KSCHL,KWERT,KBETR,KAWRT FROM PRCD_ELEMENTS INTO TABLE @DATA(IT_PRCD) WHERE KNUMV = @<WA_FINAL>-DOCUMENTCONDITION AND KPOSN = @<WA_FINAL>-ITEM.
+
+      LOOP AT IT_PRCD INTO DATA(WA_PRCD).
+        CASE WA_PRCD-KSCHL.
+
+          WHEN 'ZCDS'.
+            <WA_FINAL>-CUSTOMERDISCOUNTTYPE            = WA_PRCD-KSCHL.
+            <WA_FINAL>-CUSTOMERDISCOUNTPERORAMT        = WA_PRCD-KBETR.
+            <WA_FINAL>-CUSTOMERDISCOUNTAMT             = WA_PRCD-KWERT / 100.
+
+          WHEN 'PR00'.
+            <WA_FINAL>-PRICETYPE                       = WA_PRCD-KSCHL.
+            <WA_FINAL>-PRICEPERORAMT                   = WA_PRCD-KBETR.
+            <WA_FINAL>-PRICEAMT                        = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZSDS'.
+            <WA_FINAL>-SCHEMADISCOUNTTYPE              = WA_PRCD-KSCHL.
+            <WA_FINAL>-SCHEMADISCOUNTPERORAMT          = WA_PRCD-KBETR.
+            <WA_FINAL>-SCHEMADISCOUNTAMT               = WA_PRCD-KWERT / 100.
+
+          WHEN 'JOIG'.
+            <WA_FINAL>-INTERSTATEGSTTYPE               = WA_PRCD-KSCHL.
+            <WA_FINAL>-INTERSTATEGSTPERORAMT           = WA_PRCD-KBETR.
+            <WA_FINAL>-INTERSTATEGSTAMT                = WA_PRCD-KWERT / 100.
+            DATA(net) = WA_PRCD-KAWRT.
+
+          WHEN 'JOCG'.
+            <WA_FINAL>-CENTRALGSTTYPE                  = WA_PRCD-KSCHL.
+            <WA_FINAL>-CENTRALGSTPERORAMT              = WA_PRCD-KBETR.
+            <WA_FINAL>-CENTRALGSTAMT                   = WA_PRCD-KWERT / 100.
+
+          WHEN 'JOSG'.
+            <WA_FINAL>-STATEGSTTYPE                    = WA_PRCD-KSCHL.
+            <WA_FINAL>-STATEGSTPERORAMT                = WA_PRCD-KBETR.
+            <WA_FINAL>-STATEGSTAMT                     = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZFSG'.
+            <WA_FINAL>-FREIGHTSTATEGSTTYPE             = WA_PRCD-KSCHL.
+            <WA_FINAL>-FREIGHTSTATEGSTPERORAMT         = WA_PRCD-KBETR.
+            <WA_FINAL>-FREIGHTSTATEGSTAMT              = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZFCG'.
+            <WA_FINAL>-FREIGHTCENTRALGSTTYPE           = WA_PRCD-KSCHL.
+            <WA_FINAL>-FREIGHTCENTRALGSTPERORAMT       = WA_PRCD-KBETR.
+            <WA_FINAL>-FREIGHTCENTRALGSTAMT            = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZFIG'.
+            <WA_FINAL>-FREIGHTINTERSTATEGSTTYPE        = WA_PRCD-KSCHL.
+            <WA_FINAL>-FREIGHTINTERSTATEGSTPERORAMT    = WA_PRCD-KBETR.
+            <WA_FINAL>-FREIGHTINTERSTATEGSTAMT         = WA_PRCD-KWERT / 100.
+
+          WHEN 'ZROF'.
+            <WA_FINAL>-ROUDINGOFFTYPE                  = WA_PRCD-KSCHL.
+            <WA_FINAL>-ROUDINGOFFPERORAMT              = WA_PRCD-KBETR.
+            <WA_FINAL>-ROUDINGOFFAMT                   = WA_PRCD-KWERT / 100  .
+
+          WHEN 'ZPR0'.
+            <WA_FINAL>-MNPRICETYPE                     = WA_PRCD-KSCHL.
+            <WA_FINAL>-MNPRICEDISCOUNTAMT              = WA_PRCD-KBETR.
+            <WA_FINAL>-MNPRICEPERORAMT                 = WA_PRCD-KWERT / 100  .
+
+          WHEN 'ZTCS'.
+            <WA_FINAL>-TCSTYPE                         = WA_PRCD-KSCHL.
+            <WA_FINAL>-TCSPERORAMT                     = WA_PRCD-KBETR.
+            <WA_FINAL>-TCSAMT                          = WA_PRCD-KWERT / 100  .
+
+          WHEN 'ZCDM'.
+            <WA_FINAL>-CASHDISCOUNTMANUTYPE            = WA_PRCD-KSCHL.
+            <WA_FINAL>-CASHDISCOUNTMANUPERORAMT        = WA_PRCD-KBETR.
+            <WA_FINAL>-CASHDISCOUNTMANUAMT             = WA_PRCD-KWERT / 100  .
+
+        ENDCASE.
+
+      ENDLOOP.
+
+      <WA_FINAL>-TAX = <WA_FINAL>-INTERSTATEGSTAMT + <WA_FINAL>-TCSAMT.
+
+      IF net IS NOT INITIAL.
+        <WA_FINAL>-NET = net + <WA_FINAL>-ROUDINGOFFAMT.
+      ELSEIF <WA_FINAL>-MNPRICEPERORAMT IS NOT INITIAL.
+        <WA_FINAL>-NET = <WA_FINAL>-MNPRICEPERORAMT + <WA_FINAL>-ROUDINGOFFAMT.
+      ENDIF.
+
+      <WA_FINAL>-MATERIAL        = |{ <WA_FINAL>-MATERIAL ALPHA = OUT }|.
+      <WA_FINAL>-MATERIALENTERED = |{ <WA_FINAL>-MATERIALENTERED ALPHA = OUT }|.
+      <WA_FINAL>-SALESDOCUMENT = |{ <WA_FINAL>-SALESDOCUMENT ALPHA = OUT }|.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-DOCUMENTNUM
+        IMPORTING
+          OUTPUT = <WA_FINAL>-DOCUMENTNUM.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-REFERENCE
+        IMPORTING
+          OUTPUT = <WA_FINAL>-REFERENCE.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-ASSIGNMENT
+        IMPORTING
+          OUTPUT = <WA_FINAL>-ASSIGNMENT.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-DOCUMENTCONDITION
+        IMPORTING
+          OUTPUT = <WA_FINAL>-DOCUMENTCONDITION.
+
+
+      CONDENSE : <WA_FINAL>-NETVALUE, <WA_FINAL>-EXCHANGRATE, <WA_FINAL>-CUSTOMERDISCOUNTPERORAMT, <WA_FINAL>-CUSTOMERDISCOUNTAMT, <WA_FINAL>-PRICEPERORAMT,
+       <WA_FINAL>-PRICEAMT, <WA_FINAL>-INTERSTATEGSTAMT, <WA_FINAL>-INTERSTATEGSTPERORAMT, <WA_FINAL>-ROUDINGOFFAMT, <WA_FINAL>-ROUDINGOFFPERORAMT,
+       <WA_FINAL>-BILLEDQUANTITY, <WA_FINAL>-CASHDISCOUNTBASE, <WA_FINAL>-CENTRALGSTAMT, <WA_FINAL>-CENTRALGSTPERORAMT, <WA_FINAL>-STATEGSTAMT,
+       <WA_FINAL>-STATEGSTPERORAMT, <WA_FINAL>-FREIGHTCENTRALGSTAMT, <WA_FINAL>-FREIGHTCENTRALGSTPERORAMT, <WA_FINAL>-FREIGHTINTERSTATEGSTAMT,
+       <WA_FINAL>-FREIGHTINTERSTATEGSTPERORAMT, <WA_FINAL>-FREIGHTSTATEGSTAMT, <WA_FINAL>-FREIGHTSTATEGSTPERORAMT, <WA_FINAL>-TAX,
+       <WA_FINAL>-CASHDISCOUNTMANUAMT, <WA_FINAL>-CASHDISCOUNTMANUPERORAMT.
+
+      CLEAR : WA_ERDAT,WA_ERZET,WA_DATE,WA_TIME,WA_TAX0,WA_TAX1.
+
+
+    ENDLOOP.
+
+    SORT IT_FINAL BY DOCUMENTNUM ITEM.
+
+
+    GS_JSON = /UI2/CL_JSON=>SERIALIZE(
+              DATA             = IT_FINAL
+*              compress         = abap_true
+*              name             =
+              PRETTY_NAME      = /UI2/CL_JSON=>PRETTY_MODE-CAMEL_CASE
+          ) .
+
+    SERVER->RESPONSE->SET_CDATA(
+      EXPORTING
+        DATA   =  GS_JSON   " Character data
+*              offset = 0    " Offset into character data
+*              length = -1    " Length of character data
+    ).
+
+
+
+
+
+  ENDMETHOD.
