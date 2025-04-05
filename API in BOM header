@@ -1,0 +1,148 @@
+  METHOD if_http_extension~handle_request.
+
+
+
+    TYPES : BEGIN OF ty_stru,
+              bommerial        TYPE matnr,
+              plant            TYPE werks_d,
+              bom              TYPE stnum,
+              alternative_bom  TYPE stlal,
+              bom_usage        TYPE stlan,
+              technical_type   TYPE tetyp_d,
+              bom_description  TYPE bktxt,
+              alternative_txt  TYPE bktxt,
+              base_qty         TYPE menge_d,
+              uom              TYPE meins,
+              change_number    TYPE aennr,
+              bom_status       TYPE stlst,
+              valid_from       TYPE char10,
+              deletion_ind     TYPE lkenz,
+              deletion_flag    TYPE loekz,
+              cad_indicator    TYPE lkenz,
+              change_number1   TYPE aennr,
+              change_number_to TYPE aenra,
+              valid_from1      TYPE char10,
+              valid_to         TYPE char10,
+              create_on_time   TYPE andat,
+              created_by       TYPE annam,
+              change_on_time   TYPE andat,
+              change_by        TYPE annam,
+            END OF ty_stru.
+
+
+
+    DATA : it_final TYPE TABLE OF ty_stru,
+           wa_final TYPE ty_stru.
+
+
+    DATA : gs_json TYPE string .
+
+
+    CALL METHOD me->get_userdetails
+      EXPORTING
+        server  = server                   " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+*       material =  data(matnr)                " Material Number
+        plant   = DATA(werks)                " Plant Table for National (Centrally Agreed) Contracts
+        alt_bom = DATA(stlal).               " Alternative BOM .
+
+
+    SELECT a~matnr                         AS   bommaterial,
+           c~maktx                         AS   bommaterialdesc,
+           a~werks                         AS   plant,
+           a~stlan                         AS   bomusage,
+           a~stlnr                         AS   bom,
+           a~stlal                         AS   alternativebom,
+           b~stlty                         AS   technicaltype,
+           b~stktx                         AS   bomusagedesc,
+           b~aennr                         AS   changenumber,
+           b~stlst                         AS   bomstatus,
+           b~datuv                         AS   validfrom,
+           b~valid_to                      AS   validto,
+           CAST( b~bmeng AS CHAR )         AS   baseqty,
+           b~bmein                         AS   uom,
+           b~lkenz                         AS   deletionind,
+           b~loekz                         AS   deletionflag,
+           b~cadkz                         AS   cadind,
+           b~ecn_to                        AS   changenumberto,
+           b~andat                         AS   createdon,
+*           b~ANDAT                         as   validto1,
+           b~annam                         AS   createdby,
+           b~aedat                         AS   changedontime,
+           b~aenam                         AS    changedby,
+           d~verid                         AS  Version
+      FROM mast AS a
+      LEFT OUTER JOIN stko AS b
+      ON ( a~stlnr = b~stlnr AND a~stlal = b~stlal )
+      LEFT OUTER JOIN makt AS c
+      ON ( a~matnr = c~matnr AND c~spras = @sy-langu )
+      LEFT OUTER JOIN eina as e
+      ON ( a~matnr = e~matnr )
+      LEFT OUTER JOIN eine as d
+      ON ( e~infnr = d~infnr )
+      INTO TABLE @DATA(it_bom_head).
+*      WHERE a~matnr = @matnr AND a~werks = @werks and a~stlal = @stlal.
+*      WHERE a~werks = @werks AND a~stlal = @stlal.
+
+
+    SORT it_bom_head by bommaterial plant alternativebom.
+    DELETE ADJACENT DUPLICATES FROM it_bom_head COMPARING bommaterial plant alternativebom.
+
+
+    LOOP AT it_bom_head ASSIGNING FIELD-SYMBOL(<wa_bom>).
+
+      <wa_bom>-validto = '99991231'.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          input  = <wa_bom>-bommaterial
+        IMPORTING
+          output = <wa_bom>-bommaterial.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          input  = <wa_bom>-bom
+        IMPORTING
+          output = <wa_bom>-bom.
+
+      CONDENSE : <wa_bom>-baseqty.
+
+
+
+    ENDLOOP.
+
+
+
+
+    DATA(json_writer) = cl_sxml_string_writer=>create(
+                   type = if_sxml=>co_xt_json ).
+    CALL TRANSFORMATION id SOURCE result = it_bom_head                             RESULT XML json_writer.
+    DATA(json) = json_writer->get_output( ).
+
+    DATA: lo_json_data TYPE REF TO zcl_trex_json_serializer,
+          json1        TYPE string.
+
+    CREATE OBJECT lo_json_data
+      EXPORTING
+        data = it_bom_head.
+
+* serialize data
+
+    lo_json_data->serialize( ).
+
+* get serialized json data string
+
+    json1 = lo_json_data->get_data( ).
+
+    "cl_demo_output=>get converts ABAP data to HTML and is secure
+*    server->response->set_cdata(
+*      data = cl_demo_output=>get( connections ) ).
+    server->response->set_cdata(
+      data = json1 ).
+
+
+
+
+  ENDMETHOD.
