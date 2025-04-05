@@ -1,0 +1,240 @@
+*&---------------------------------------------------------------------*
+*& REPORT ZSDR_PRICEANDSALES_QTY_REP
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZSDR_PRICEANDSALES_QTY_REP.
+
+
+TABLES : VBRK,VBRP,MARA.
+
+TYPES : BEGIN OF TY_VBRK,
+          VBELN TYPE VBRK-VBELN,
+          FKDAT TYPE VBRK-FKDAT,
+          KUNRG TYPE VBRK-KUNRG,
+
+        END OF TY_VBRK.
+
+
+TYPES : BEGIN OF TY_FINAL,
+          VBELN  TYPE VBRK-VBELN,
+          FKDAT  TYPE VBRK-FKDAT,
+          KUNRG  TYPE VBRK-KUNRG,
+          VBELN1 TYPE VBRP-VBELN,
+          MATNR  TYPE VBRP-MATNR,
+          ARKTX  TYPE VBRP-ARKTX,
+          FKIMG  TYPE VBRP-FKIMG,
+          VSTEL  TYPE VBRP-vstel,
+          SNO    TYPE  INT4,
+          NAME1  TYPE CHAR40,
+         WRKST   TYPE MARA-WRKST,
+         ZZLOOPACKQTY TYPE MARA-ZZLOOPACKQTY,
+        END OF TY_FINAL.
+
+
+DATA : SNO TYPE INT4.
+
+
+DATA : IT_FINAL TYPE STANDARD TABLE OF TY_FINAL,
+       WA_FINAL TYPE TY_FINAL.
+
+
+DATA : IT_FIELDCAT TYPE SLIS_T_FIELDCAT_ALV,
+       WA_FIELDCAT TYPE SLIS_FIELDCAT_ALV,
+       LV          TYPE DISVARIANT,
+       WA_LAYOUT   TYPE SLIS_LAYOUT_ALV.
+
+DATA: I_SORT  TYPE SLIS_T_SORTINFO_ALV,
+      WA_SORT LIKE LINE OF I_SORT.
+
+DATA : I_EVENTS  TYPE SLIS_T_EVENT .
+DATA : WA_EVENTS LIKE LINE OF I_EVENTS.
+
+
+
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+  SELECT-OPTIONS : S_DATE  FOR VBRP-ERDAT,
+                   S_MATNR FOR VBRP-MATNR,
+                   S_VSTEL FOR VBRP-VSTEL,
+                   S_WRKST FOR MARA-WRKST,
+                   S_FKART FOR vbrk-FKART DEFAULT 'ZDOI' OBLIGATORY.
+
+SELECTION-SCREEN END OF BLOCK B1.
+
+START-OF-SELECTION.
+
+  PERFORM GET_DATA.
+  PERFORM FIELD_CAT.
+  PERFORM DISPLAY_DATA.
+
+
+FORM GET_DATA.
+
+  DATA : SNO TYPE INT4.
+
+  DATA : SNO1 TYPE INT4.
+
+  SELECT  VK~VBELN,
+          VK~FKDAT,
+          vk~FKART,
+          VK~KUNRG,
+          VP~MATNR,
+          VP~ARKTX,
+          VP~FKIMG,
+          VP~VSTEL,
+          MA~WRKST,
+          MA~ZZLOOPACKQTY
+          FROM  VBRK AS VK
+          INNER JOIN  VBRP AS VP ON  VK~VBELN = VP~VBELN
+          INNER JOIN MARA AS MA ON VP~MATNR = MA~MATNR
+          WHERE  vp~vstel in @s_vstel AND VK~FKSTO = ' ' AND VK~ERDAT IN @S_DATE AND VP~MATNR IN @S_MATNR
+          and vk~FKART in @s_FKART
+*          AND (    vk~FKART = 'ZDOI'
+*                OR VK~FKART = 'ZDRM'
+*                OR VK~FKART = 'ZF2'
+*                OR VK~FKART = 'ZODS'
+*                OR VK~FKART = 'ZSAI'
+*                OR VK~FKART = 'ZSCI' )
+          AND MA~WRKST IN @S_WRKST
+          INTO TABLE @DATA(IT_VBRP).
+
+
+  LOOP AT IT_VBRP INTO DATA(WA_VBRP) .
+
+    SNO1 = SNO1 + 1  .
+    WA_FINAL-SNO = SNO1 .
+    WA_FINAL-VBELN = WA_VBRP-VBELN.
+    WA_FINAL-MATNR = WA_VBRP-MATNR.
+    WA_FINAL-FKIMG = WA_VBRP-FKIMG.
+    wa_final-vstel = wa_vbrp-vstel.
+    WA_FINAL-ZZLOOPACKQTY = WA_VBRP-ZZLOOPACKQTY.
+
+      SELECT SINGLE MAKTX FROM MAKT INTO WA_FINAL-ARKTX WHERE MATNR = WA_FINAL-MATNR.
+      SELECT SINGLE WRKST FROM MARA INTO WA_FINAL-WRKST WHERE MATNR = WA_FINAL-MATNR .
+
+      WA_FINAL-VBELN  = WA_VBRP-VBELN.
+      WA_FINAL-FKDAT  = WA_VBRP-FKDAT.
+      WA_FINAL-KUNRG  = WA_VBRP-KUNRG.
+
+   SELECT SINGLE NAME1 FROM KNA1 INTO WA_FINAL-NAME1 WHERE KUNNR = WA_FINAL-KUNRG.
+
+    APPEND WA_FINAL TO IT_FINAL.
+
+    CLEAR : WA_FINAL.
+
+     ENDLOOP.
+
+*  ENDLOOP.
+ENDFORM.
+
+FORM FIELD_CAT.
+
+
+  PERFORM GENFCAT USING 'SNO'                                     'SNO'        '1' '' ''.
+  PERFORM GENFCAT USING 'INVOICE NO'                              'VBELN'      '2' '' ''.
+  PERFORM GENFCAT USING 'DATE'                                    'FKDAT'      '3' '' ''.
+  PERFORM GENFCAT USING 'CUSTOMER NO'                             'KUNRG'      '4' '' ''.
+  PERFORM GENFCAT USING 'CUSTOMER NAME'                           'NAME1'      '4' '' ''.
+  PERFORM GENFCAT USING 'MATERIAL  NO'                            'MATNR'      '5' '' ''.
+  PERFORM GENFCAT USING 'DESCRIPTION'                             'ARKTX'      '6' '' ''.
+  PERFORM GENFCAT USING 'PLANT'                                   'VSTEL'      '6' '' ''.
+  PERFORM GENFCAT USING 'SOLD QTY'                                'FKIMG'      '7' '' ''.
+  PERFORM GENFCAT USING 'MASTERBOX QTY'                           'ZZLOOPACKQTY' '8' '' ''.
+
+ENDFORM.
+
+FORM GENFCAT  USING    VALUE(P_0122)
+  VALUE(P_0123)
+  VALUE(P_0124)
+  VALUE(P_0125)
+  VALUE(P_0126).
+  WA_FIELDCAT-COL_POS    = P_0124.
+  WA_FIELDCAT-FIELDNAME  = P_0123.
+  WA_FIELDCAT-SELTEXT_L  = P_0122.
+  WA_FIELDCAT-LOWERCASE  = 'X'.
+  WA_FIELDCAT-DO_SUM  = P_0125.
+
+  WA_FIELDCAT-NO_ZERO  = 'X'.
+
+  WA_FIELDCAT-KEY  = P_0126.
+  APPEND WA_FIELDCAT TO IT_FIELDCAT.
+  CLEAR WA_FIELDCAT.
+
+ENDFORM.
+
+
+FORM DISPLAY_DATA.
+  WA_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+*  DATA: LV_REPID TYPE SY-REPID.
+*  WA_LAYOUT-NO_COLHEAD = 'X'.
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK      = ' '
+*     I_BYPASSING_BUFFER     = ' '
+*     I_BUFFER_ACTIVE        = ' '
+      I_CALLBACK_PROGRAM     = SY-REPID
+*     I_CALLBACK_PF_STATUS_SET    = ' '
+*     I_CALLBACK_USER_COMMAND     = ' '
+      I_CALLBACK_TOP_OF_PAGE = 'TOP-OF-PAGE'
+*     I_CALLBACK_HTML_TOP_OF_PAGE = 'TOP-OF-PAGE'
+*     I_CALLBACK_HTML_END_OF_LIST = ' '
+*     I_STRUCTURE_NAME       =
+*     I_BACKGROUND_ID        = ' '
+*     I_GRID_TIT  LE                      = '               RUPEES IN LAKH'
+*     I_GRID_SETTINGS        =
+      IS_LAYOUT              = WA_LAYOUT
+      IT_FIELDCAT            = IT_FIELDCAT
+*     IT_EXCLUDING           =
+*     IT_SPECIAL_GROUPS      =
+      IT_SORT                = I_SORT
+*     IT_FILTER              =
+*     IS_SEL_HIDE            =
+*     I_DEFAULT              = 'X'
+      I_SAVE                 = 'A'
+      IS_VARIANT             = LV
+*     IT_EVENTS              = I_EVENTS
+*     IT_EVENT_EXIT          =
+*     IS_PRINT               =
+*     IS_REPREP_ID           =
+*     I_SCREEN_START_COLUMN  = 0
+*     I_SCREEN_START_LINE    = 0
+*     I_SCREEN_END_COLUMN    = 0
+*     I_SCREEN_END_LINE      = 0
+*     I_HTML_HEIGHT_TOP      = 0
+*     I_HTML_HEIGHT_END      = 0
+*     IT_ALV_GRAPHICS        =
+*     IT_HYPERLINK           =
+*     IT_ADD_FIELDCAT        =
+*     IT_EXCEPT_QINFO        =
+*     IR_SALV_FULLSCREEN_ADAPTER  =
+* IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER     =
+*     ES_EXIT_CAUSED_BY_USER =
+    TABLES
+      T_OUTTAB               = IT_FINAL
+    EXCEPTIONS
+      PROGRAM_ERROR          = 1
+      OTHERS                 = 2.
+  IF SY-SUBRC <> 0.
+* IMPLEMENT SUITABLE ERROR HANDLING HERE
+  ENDIF.
+
+
+
+ENDFORM.
+
+FORM TOP-OF-PAGE.
+
+  DATA : IT_LISTHEADER TYPE SLIS_T_LISTHEADER,
+         WA_LISTHEADER TYPE SLIS_LISTHEADER.
+
+  WA_LISTHEADER-TYP   = 'H'.
+  WA_LISTHEADER-INFO  = 'SALES QUANTITY REPORT'.
+  APPEND WA_LISTHEADER TO  IT_LISTHEADER.
+  CLEAR :  WA_LISTHEADER.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      IT_LIST_COMMENTARY = IT_LISTHEADER.
+ENDFORM.
