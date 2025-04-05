@@ -1,0 +1,797 @@
+*&---------------------------------------------------------------------*
+*& Report ZPO_REPORT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZPO_REPORT.
+
+
+TABLES : WB2_V_EKKO_EKPO2.
+
+TYPE-POOLS: SLIS.
+
+TYPES : BEGIN OF TY_FINAL,
+
+          SLNO     TYPE INT8,
+          EBELN    TYPE WB2_V_EKKO_EKPO2-EBELN,
+          EBELP_I  TYPE WB2_V_EKKO_EKPO2-EBELP_I,
+          EBELP_2  TYPE WB2_V_EKKO_EKPO2-EBELP_I,
+          EBELP_3  TYPE WB2_V_EKKO_EKPO2-EBELP_I,
+          WERKS_I  TYPE WB2_V_EKKO_EKPO2-EBELP_I,
+          LGORT_I  TYPE WB2_V_EKKO_EKPO2-EBELP_I,
+          BEDAT    TYPE WB2_V_EKKO_EKPO2-BEDAT,
+          MENGE_I  TYPE WB2_V_EKKO_EKPO2-MENGE_I,
+          MEINS_I  TYPE WB2_V_EKKO_EKPO2-MEINS_I,
+*          NETPR_I  TYPE WB2_V_EKKO_EKPO2-NETPR_I,
+          NETPR_I  TYPE P LENGTH 11 DECIMALS 4,
+          MATNR_I  TYPE WB2_V_EKKO_EKPO2-MATNR_I,
+          LIFNR    TYPE WB2_V_EKKO_EKPO2-LIFNR,
+          LOEKZ    TYPE WB2_V_EKKO_EKPO2-LOEKZ,
+          LOEKZ_I  TYPE WB2_V_EKKO_EKPO2-LOEKZ_I,
+          ELIKZ    TYPE WB2_V_EKKO_EKPO2-ELIKZ_I,
+          BSART    TYPE WB2_V_EKKO_EKPO2-BSART,
+          BISMT    TYPE MARA-BISMT,
+          MAKTX    TYPE MAKT-MAKTX,
+          NAME1    TYPE LFA1-NAME1,
+          City     TYPE LFA1-ORT01,
+          EXTWG    TYPE MARA-EXTWG,
+          EWBEZ    TYPE TWEWT-EWBEZ,
+          LGMNG_I  TYPE WB2_V_LIKP_LIPS2-LGMNG_I,
+          LGMNG_2  TYPE WB2_V_LIKP_LIPS2-LGMNG_I,
+          BLC_Q    TYPE WB2_V_LIKP_LIPS2-LGMNG_I,
+          LGOBE    TYPE T001L-LGOBE,
+          MIGO_Q   TYPE MSEG-MENGE,
+          MIGO_QS  TYPE MSEG-MENGE,
+          MIGO_QA  TYPE MSEG-MENGE,
+          MIGO_QR  TYPE MSEG-MENGE,
+          MIRO_Q   TYPE RSEG-MENGE,
+          EKGRP    TYPE MARC-EKGRP,
+          EKNAM    TYPE T024-EKNAM,
+          STATUS   TYPE CHAR40,
+          LMENGE01 TYPE QALS-LMENGE01,
+          LMENGE04 TYPE QALS-LMENGE04,
+          MIGO_S   TYPE CHAR40,
+          MIRO_S   TYPE CHAR40,
+          LOCK     TYPE CHAR40,
+          PO_S     TYPE CHAR40,
+          LOT_N    TYPE QALS-PRUEFLOS,
+          IN_Q     TYPE MSEG-MENGE,
+          BLC_VAL  TYPE P LENGTH 11 DECIMALS 3,
+          ORD_VAL  TYPE P LENGTH 11 DECIMALS 3,
+          CO_ORD   TYPE ZCO_ORD1,
+
+
+        END OF TY_FINAL.
+
+DATA LV_TRS TYPE SLIS_SELFIELD-VALUE.
+
+DATA : IT_FINAL TYPE STANDARD TABLE OF TY_FINAL,
+       WA_FINAL TYPE TY_FINAL.
+DATA : S_NO TYPE INT8.
+DATA : S_NO1 TYPE INT8.
+DATA : LOTNO TYPE INT8.
+DATA : CNO1 TYPE INT8.
+
+DATA: MATNR TYPE MSEG-MATNR.
+DATA: CN1 TYPE INT8.
+DATA: CN2 TYPE INT8.
+
+DATA : KT_ITEM TYPE STANDARD TABLE OF TY_FINAL,
+       IT      TYPE STANDARD TABLE OF TY_FINAL,
+       KS_ITEM TYPE TY_FINAL,
+       MS_ITEM TYPE TY_FINAL,
+       WA      TYPE TY_FINAL.
+
+
+DATA : IT_FINAL2 TYPE STANDARD TABLE OF TY_FINAL,
+       GT_ITEM   TYPE STANDARD TABLE OF TY_FINAL,
+       MT2_ITEM  TYPE STANDARD TABLE OF TY_FINAL,
+       WA_FINAL2 TYPE TY_FINAL,
+       GS_ITEM3  TYPE TY_FINAL,
+       GS_ITEM4  TYPE TY_FINAL,
+       MS2_ITEM  TYPE TY_FINAL.
+
+
+
+
+
+
+
+
+
+DATA: _LAYOUTLS  TYPE SLIS_LAYOUT_ALV.
+DATA: LS_FIELDCAT TYPE SLIS_FIELDCAT_ALV,
+      LT_FIELDCAT TYPE TABLE OF SLIS_FIELDCAT_ALV.
+
+DATA: LS_FIELDCAT2 TYPE SLIS_FIELDCAT_ALV,
+      LT_FIELDCAT2 TYPE TABLE OF SLIS_FIELDCAT_ALV.
+
+DATA:
+  IT_FIELDCAT   TYPE SLIS_T_FIELDCAT_ALV,
+  IT_FIELDCAT1  TYPE SLIS_T_FIELDCAT_ALV,
+  WA_FIELDCAT   TYPE SLIS_FIELDCAT_ALV,
+  WA_FIELDCAT1  TYPE SLIS_FIELDCAT_ALV,
+  LV            TYPE DISVARIANT,
+  WA_LAYOUT     TYPE SLIS_LAYOUT_ALV,
+  GD_LAYOUT     TYPE SLIS_LAYOUT_ALV,
+  GD_REPID      LIKE SY-REPID,
+  GT_EVENTS     TYPE SLIS_T_EVENT,
+  GD_PRNTPARAMS TYPE SLIS_PRINT_ALV.
+
+DATA:CNT1 TYPE INT8.
+DATA:
+  IT_FIELDCAT2  TYPE SLIS_T_FIELDCAT_ALV,
+  IT_FIELDCAT12 TYPE SLIS_T_FIELDCAT_ALV,
+  WA_FIELDCAT2  TYPE SLIS_FIELDCAT_ALV,
+  WA_FIELDCAT12 TYPE SLIS_FIELDCAT_ALV,
+  LV2           TYPE DISVARIANT,
+  WA_LAYOUT2    TYPE SLIS_LAYOUT_ALV.
+
+SELECTION-SCREEN: BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+
+  SELECT-OPTIONS : S_BEDAT   FOR WB2_V_EKKO_EKPO2-BEDAT.     "Document Date
+  SELECT-OPTIONS : S_WERKS   FOR WB2_V_EKKO_EKPO2-WERKS_I .  "Plant
+  SELECT-OPTIONS : S_EBELN   FOR WB2_V_EKKO_EKPO2-EBELN .    "Purchasing Document
+  SELECT-OPTIONS : S_MATNR   FOR WB2_V_EKKO_EKPO2-MATNR_I.   "Material
+  SELECT-OPTIONS : S_LIFNR   FOR WB2_V_EKKO_EKPO2-LIFNR.     "Supplier
+  SELECT-OPTIONS : S_BSART   FOR WB2_V_EKKO_EKPO2-BSART.     "Purchasing Doc. Type
+  SELECT-OPTIONS : S_EKGRP   FOR WB2_V_EKKO_EKPO2-EKGRP.     "Purchasing Group
+  SELECT-OPTIONS : S_MTART   FOR WB2_V_EKKO_EKPO2-MTART_I.   "Material type
+
+
+SELECTION-SCREEN END OF BLOCK B1 .
+
+
+
+SELECTION-SCREEN: BEGIN OF BLOCK B2 WITH FRAME TITLE TEXT-001.
+
+
+  PARAMETERS: R1 RADIOBUTTON GROUP RAD1 DEFAULT 'X' USER-COMMAND FLAG,
+              R2 RADIOBUTTON GROUP RAD1,
+              R3 RADIOBUTTON GROUP RAD1.
+
+
+SELECTION-SCREEN END OF BLOCK B2 .
+
+
+
+
+
+
+START-OF-SELECTION.
+*  CASE 'X'.
+*    WHEN r1.
+
+  IF R3 IS INITIAL .
+    PERFORM GET_DATA.
+    PERFORM FIELD_CAT.
+    PERFORM DISPLAY_ALV.
+    PERFORM TOP-OF-PAGE.
+
+  ELSEIF R3 IS NOT INITIAL.
+    PERFORM GET_DATA.
+    PERFORM FIELD_CAT2.
+    PERFORM DISPLAY_ALV2.
+  ENDIF.
+
+*&---------------------------------------------------------------------*
+*& Form get_data
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM GET_DATA .
+
+  SELECT  *  FROM WB2_V_EKKO_EKPO2 INTO TABLE @DATA(IT_PO) WHERE
+       BEDAT      IN  @S_BEDAT    AND
+       WERKS_I     IN @S_WERKS    AND
+       EBELN      IN  @S_EBELN    AND
+       MATNR_I    IN  @S_MATNR    AND
+       LIFNR      IN  @S_LIFNR    AND
+       BSART      IN  @S_BSART    AND
+       EKGRP      IN  @S_EKGRP    AND
+       MTART_I    IN  @S_MTART    .
+
+
+*  DELETE IT_MSEG WHERE BWART = '350' .
+
+
+  LOOP AT IT_PO INTO DATA(WA_PO).
+    MOVE-CORRESPONDING WA_PO TO WA_FINAL.
+
+    WA_FINAL-EBELN      = WA_PO-EBELN_I  .
+    WA_FINAL-EBELP_I    = WA_PO-EBELP_I  .
+    WA_FINAL-EBELP_2    = WA_PO-EBELP_I  .
+    WA_FINAL-EBELP_3    = WA_PO-EBELP_I  .
+    WA_FINAL-WERKS_I    = WA_PO-WERKS_I  .
+    WA_FINAL-LGORT_I    = WA_PO-LGORT_I  .
+    WA_FINAL-BEDAT      = WA_PO-BEDAT    .
+    WA_FINAL-MENGE_I    = WA_PO-MENGE_I  .
+    WA_FINAL-MEINS_I    = WA_PO-MEINS_I  .
+    WA_FINAL-MEINS_I    = WA_PO-MEINS_I  .
+    WA_FINAL-MATNR_I    = WA_PO-MATNR_I  .
+    WA_FINAL-LIFNR      = WA_PO-LIFNR    .
+    WA_FINAL-LOEKZ      = WA_PO-LOEKZ    .
+    WA_FINAL-NETPR_I    = WA_PO-NETPR_I  .
+    WA_FINAL-LGORT_I    = WA_PO-LGORT_I  .
+    WA_FINAL-LOEKZ_I    = WA_PO-LOEKZ_I  .
+    WA_FINAL-ELIKZ      = WA_PO-ELIKZ_I  .
+    WA_FINAL-BSART      = WA_PO-BSART    .
+
+    IF   WA_FINAL-LOEKZ_I = 'S'.
+
+      WA_FINAL-LOCK = 'Locked'.
+
+    ELSEIF  WA_FINAL-LOEKZ_I = 'L'.
+
+      WA_FINAL-LOCK = 'Deleted'.
+
+    ENDIF.
+
+
+    IF WA_PO-NETPR_I  IS NOT INITIAL.
+      WA_FINAL-NETPR_I    = WA_PO-NETPR_I  / 100   .
+    ENDIF.
+
+    SELECT SINGLE  BISMT FROM MARA INTO @WA_FINAL-BISMT WHERE MATNR = @WA_FINAL-MATNR_I .
+    SELECT SINGLE  EXTWG  FROM MARA INTO @WA_FINAL-EXTWG WHERE MATNR = @WA_FINAL-MATNR_I .
+    SELECT SINGLE  EWBEZ  FROM TWEWT INTO @WA_FINAL-EWBEZ WHERE EXTWG = @WA_FINAL-EXTWG AND SPRAS = 'E'.
+    SELECT SINGLE  MAKTX FROM MAKT INTO @WA_FINAL-MAKTX WHERE MATNR = @WA_FINAL-MATNR_I AND SPRAS = 'E'.
+    SELECT SINGLE  NAME1, ORT01 INTO (@WA_FINAL-NAME1, @WA_FINAL-CITY) FROM LFA1 WHERE LIFNR = @WA_FINAL-LIFNR .
+    CLEAR:WA_FINAL-EKGRP.
+    SELECT SINGLE  EKGRP FROM MARC INTO @WA_FINAL-EKGRP WHERE MATNR = @WA_FINAL-MATNR_I .
+    SELECT SINGLE  EKNAM FROM T024 INTO @WA_FINAL-EKNAM WHERE EKGRP = @WA_FINAL-EKGRP .
+    SELECT SINGLE CO_ORD FROM ZMAT_DETAIL INTO @WA_FINAL-CO_ORD WHERE MATNR = @WA_FINAL-MATNR_I.
+
+    SHIFT WA_FINAL-LGORT_I LEFT DELETING LEADING '0'.
+
+
+    SELECT SINGLE  LGOBE FROM T001L INTO @WA_FINAL-LGOBE WHERE LGORT = @WA_FINAL-LGORT_I.
+
+    IF  WA_FINAL-LOEKZ   NE 'l'.
+      SELECT SUM( LGMNG_I )  FROM WB2_V_LIKP_LIPS2 INTO @WA_FINAL-LGMNG_I WHERE VGBEL_I = @WA_FINAL-EBELN AND VGPOS_I = @WA_FINAL-EBELP_I.
+*      IF WA_FINAL-LGMNG_I  IS NOT INITIAL.
+      WA_FINAL-BLC_Q      = WA_FINAL-MENGE_I  - WA_FINAL-LGMNG_I    .
+*      ENDIF.
+    ELSEIF   WA_FINAL-LOEKZ   = 'L'.
+      WA_FINAL-LGMNG_I    = '0'.
+      WA_FINAL-BLC_Q      = '0'  .
+    ENDIF.
+
+    SELECT SUM( LGMNG_I )  FROM WB2_V_LIKP_LIPS2 INTO @WA_FINAL-LGMNG_2 WHERE VGBEL_I = @WA_FINAL-EBELN AND VGPOS_I = @WA_FINAL-EBELP_I.
+    SELECT SUM( MENGE )    FROM MSEG INTO @WA_FINAL-MIGO_Q WHERE EBELN = @WA_FINAL-EBELN AND EBELP = @WA_FINAL-EBELP_I
+      AND BWART IN ( '101' , 'ZSH' ) AND  SHKZG = 'S'  .
+
+    SELECT SUM( MENGE )  FROM MSEG INTO @WA_FINAL-MIGO_QS WHERE EBELN = @WA_FINAL-EBELN AND EBELP = @WA_FINAL-EBELP_I
+      AND BWART ='ZSH'  AND  SHKZG = 'S'  .
+
+    SELECT SUM( MENGE )    FROM RSEG INTO @WA_FINAL-MIRO_Q WHERE EBELN = @WA_FINAL-EBELN AND EBELP = @WA_FINAL-EBELP_I.
+
+
+    SELECT  SUM( LMENGE01 )   FROM QALS INTO @WA_FINAL-LMENGE01 WHERE  EBELN = @WA_FINAL-EBELN AND EBELP = @WA_FINAL-EBELP_I.
+    SELECT  SUM( LMENGE04 )   FROM QALS INTO @WA_FINAL-LMENGE04  WHERE EBELN = @WA_FINAL-EBELN AND EBELP = @WA_FINAL-EBELP_I.
+
+    WA_FINAL-MIGO_QR = WA_FINAL-LMENGE01 +  WA_FINAL-LMENGE04 +  WA_FINAL-MIGO_QS.
+
+
+    IF WA_FINAL-MIGO_Q  = WA_FINAL-MIGO_QR .
+
+      WA_FINAL-MIGO_S = 'Closed'.
+
+    ELSE.
+
+      WA_FINAL-MIGO_S = 'Open'.
+
+    ENDIF.
+
+
+    IF WA_FINAL-MIGO_Q  = WA_FINAL-MIRO_Q.
+
+      WA_FINAL-MIRO_S = 'Closed'.
+
+    ELSE.
+
+      WA_FINAL-MIRO_S = 'Open'.
+
+    ENDIF.
+
+
+
+    IF WA_FINAL-MENGE_I  = WA_FINAL-MIGO_Q.
+
+      WA_FINAL-PO_S = 'Closed'.
+
+    ELSEIF  WA_FINAL-LOEKZ_I = 'L' OR WA_FINAL-ELIKZ = 'X'.
+
+      WA_FINAL-PO_S = 'Manually Closed'.
+
+    ELSE.
+      WA_FINAL-PO_S = 'Open'.
+
+    ENDIF.
+
+
+    IF WA_FINAL-PO_S = 'Manually Closed'.
+
+      WA_FINAL-BLC_Q = ' '.
+
+    ENDIF.
+
+
+    WA_FINAL-BLC_VAL = WA_FINAL-BLC_Q * WA_FINAL-NETPR_I.
+    WA_FINAL-ORD_VAL = WA_FINAL-MENGE_I * WA_FINAL-NETPR_I.
+
+*SELECT  SINGLE PRUEFLOS FROM QALS INTO @DATA(INS) WHERE  EBELN = @WA_FINAL-EBELN AND EBELP = @WA_FINAL-EBELP_I.
+
+
+
+
+    APPEND WA_FINAL TO IT_FINAL.
+    CLEAR : WA_FINAL.
+  ENDLOOP.
+
+  SORT IT_FINAL BY  EBELN   EBELP_I ASCENDING.
+
+
+  LOOP AT IT_FINAL ASSIGNING FIELD-SYMBOL(<TWO>) .
+
+    SELECT  WBSTA FROM LIPS INTO TABLE @DATA(IT_S) WHERE VGBEL = @<TWO>-EBELN    AND VGPOS = @<TWO>-EBELP_I.
+
+    IF SY-SUBRC NE 0.
+      <TWO>-STATUS = 'Closed'.
+    ENDIF.
+
+
+
+    LOOP AT IT_S INTO DATA(WA_S).
+
+      IF WA_S = 'C'.
+
+        CN1  = CN1  + 1.
+
+      ELSEIF WA_S NE 'C'.
+
+        CN2  = CN2  + 1.
+
+      ENDIF.
+
+    ENDLOOP.
+
+
+    IF   <TWO>-STATUS NE 'Closed'.
+
+      IF CN2 IS INITIAL.
+
+        <TWO>-STATUS = 'Closed'.
+
+      ELSEIF CN2 IS NOT INITIAL.
+
+        <TWO>-STATUS = 'Open'.
+
+      ENDIF.
+    ENDIF.
+
+
+    CLEAR : CN1, CN2.
+
+  ENDLOOP.
+
+
+  SORT IT_FINAL BY  EBELN   EBELP_I ASCENDING.
+
+
+  LOOP AT IT_FINAL ASSIGNING FIELD-SYMBOL(<INQ>) .
+
+    SELECT  * FROM QALS INTO TABLE @DATA(IT_I) WHERE EBELN = @<TWO>-EBELN    AND EBELP = @<TWO>-EBELP_I.
+
+
+    LOOP AT IT_I INTO DATA(WA_I).
+
+      <INQ>-LOT_N = WA_I-PRUEFLOS.
+
+      SELECT SINGLE VBEWERTUNG FROM QAVE INTO @DATA(CO) WHERE PRUEFLOS = @<INQ>-LOT_N.
+
+      IF CO IS INITIAL.
+
+        <INQ>-IN_Q =  <INQ>-IN_Q +  WA_I-LMENGEPR .
+
+      ENDIF.
+
+
+    ENDLOOP.
+
+
+    IF   <TWO>-STATUS NE 'Closed'.
+
+      IF CN2 IS INITIAL.
+
+        <TWO>-STATUS = 'Closed'.
+
+      ELSEIF CN2 IS NOT INITIAL.
+
+        <TWO>-STATUS = 'Open'.
+
+      ENDIF.
+    ENDIF.
+
+
+    CLEAR : CN1, CN2.
+
+
+  ENDLOOP.
+
+
+  IF R1 IS NOT INITIAL.
+
+    DELETE IT_FINAL  WHERE BLC_Q LE 0.
+
+  ENDIF.
+
+******************* SUMMARY *****************************
+
+
+  IF R3 IS NOT INITIAL.
+    IT_FINAL2[] = IT_FINAL[].
+
+    SORT IT_FINAL2 BY  LIFNR BSART EBELN  ASCENDING.
+
+
+    GT_ITEM = IT_FINAL2.
+    SORT IT_FINAL2 BY LIFNR BSART EBELN ASCENDING.
+    DATA(KT_ITEM2) = IT_FINAL2.
+    SORT IT_FINAL2 BY LIFNR BSART EBELN  ASCENDING.
+    SORT KT_ITEM2 BY LIFNR BSART EBELN ASCENDING.
+    DELETE ADJACENT DUPLICATES FROM KT_ITEM2 COMPARING LIFNR BSART.
+
+    CLEAR : GS_ITEM4.
+
+    LOOP AT KT_ITEM2 INTO DATA(KS_ITEM2).
+
+      LOOP AT IT_FINAL2 INTO GS_ITEM3 WHERE LIFNR = KS_ITEM2-LIFNR AND BSART  =  KS_ITEM2-BSART.
+
+
+        GS_ITEM4-LIFNR        =  GS_ITEM3-LIFNR.
+        GS_ITEM4-BSART        =  GS_ITEM3-BSART.
+        GS_ITEM4-NAME1        =  GS_ITEM3-NAME1.
+        GS_ITEM4-WERKS_I      =  GS_ITEM3-WERKS_I.
+        GS_ITEM4-BLC_VAL       =  GS_ITEM4-BLC_VAL + GS_ITEM3-BLC_VAL.
+        GS_ITEM4-ORD_VAL       =  GS_ITEM4-ORD_VAL + GS_ITEM3-ORD_VAL.
+
+
+        CLEAR:GS_ITEM3.
+      ENDLOOP.
+
+*    MOVE-CORRESPONDING ks_item2 TO ms2_item.
+
+      S_NO1 = S_NO1  + 1.
+
+      MS2_ITEM-SLNO      = S_NO1    .
+      MS2_ITEM-LIFNR     =  GS_ITEM4-LIFNR    .
+      MS2_ITEM-BSART     =  GS_ITEM4-BSART    .
+      MS2_ITEM-BLC_VAL   =  GS_ITEM4-BLC_VAL  .
+      MS2_ITEM-ORD_VAL   =  GS_ITEM4-ORD_VAL  .
+      MS2_ITEM-NAME1     =  GS_ITEM4-NAME1  .
+      MS2_ITEM-WERKS_I     =  GS_ITEM4-WERKS_I  .
+
+
+      APPEND MS2_ITEM TO MT2_ITEM.
+
+      SORT MT2_ITEM BY LIFNR.
+
+      CLEAR:MS2_ITEM,GS_ITEM4,KS_ITEM2.
+
+    ENDLOOP.
+
+
+
+
+
+  ENDIF.
+
+****************************************************************
+
+
+
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form field_cat
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM FIELD_CAT .
+
+  PERFORM GENFCAT USING 'Plant'                     'WERKS_I   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Date'                      'BEDAT     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Po No'                     'EBELN     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Po Type'                     'BSART     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Part No'                   'MATNR_I   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Old Mat Code'              'BISMT     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Description'               'MAKTX     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Vendor Code'               'LIFNR     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Vendor Name'               'NAME1     '   '1' '' ''.
+  PERFORM GENFCAT USING 'City'                      'CITY      '   '1' '' ''.
+  PERFORM GENFCAT USING 'Co-Ordinator'              'CO_ORD    '   '1' '' ''.
+  PERFORM GENFCAT USING 'External Group'            'EWBEZ     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Purchase Group'            'EKNAM     '   '1' '' ''.
+  "Purchase Group
+  PERFORM GENFCAT USING 'Order Qty'                 'MENGE_I   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Deliverd qty'              'LGMNG_I   '   '1' '' ''.
+  PERFORM GENFCAT USING 'In Quality'                'IN_Q    '   '1' '' ''.
+  "In Quality
+  PERFORM GENFCAT USING 'Balanced qty'              'BLC_Q     '   '1' '' ''.
+  PERFORM GENFCAT USING 'UOM'                       'MEINS_I   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Price'                     'NETPR_I   '   '1' '' ''.
+
+  PERFORM GENFCAT USING 'Order Value'               'ORD_VAL   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Open Value'                'BLC_VAL   '   '1' '' ''.
+
+
+
+  PERFORM GENFCAT USING 'S.Location'                'LGORT_I   '   '1' '' ''."dob
+  PERFORM GENFCAT USING 'S.Location Desc'           'LGOBE     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Inbound Seq'               'EBELP_I   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Inbound qty'               'LGMNG_2   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Inbound Status'            'STATUS   '   '1' '' ''.
+  "Inbound Status
+  PERFORM GENFCAT USING 'Migo Seq'                  'EBELP_2   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Migo qty'                  'MIGO_Q    '   '1' '' ''.
+  PERFORM GENFCAT USING 'Accepted qty'              'LMENGE01  '   '1' '' ''.
+  PERFORM GENFCAT USING 'Rejected qty'              'LMENGE04  '   '1' '' ''.
+  PERFORM GENFCAT USING 'Shortage'                  'MIGO_QS   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Migo Status'               'MIGO_S    '   '1' '' ''.
+
+  PERFORM GENFCAT USING 'Miro Seq'                  'EBELP_3   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Miro qty'                  'MIRO_Q    '   '1' '' ''.
+  PERFORM GENFCAT USING 'Miro Status'               'MIRO_S    '   '1' '' ''.
+  PERFORM GENFCAT USING 'Locked / Deleted'           'LOCK    '   '1' '' ''.
+  PERFORM GENFCAT USING 'PO Status'                  'PO_S    '   '1' '' ''.
+
+
+ENDFORM.
+
+
+
+FORM FIELD_CAT2 .
+
+  PERFORM GENFCAT USING 'Plant'                         'WERKS_I   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Po Type'                       'BSART     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Vendor Code'                   'LIFNR     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Vendor Name'                   'NAME1     '   '1' '' ''.
+  PERFORM GENFCAT USING 'Tot Order Value'               'ORD_VAL   '   '1' '' ''.
+  PERFORM GENFCAT USING 'Tot Open Value'                'BLC_VAL   '   '1' '' ''.
+
+ENDFORM.
+
+
+
+
+
+
+
+
+
+
+FORM GENFCAT  USING    VALUE(P_0122)
+    VALUE(P_0123)
+    VALUE(P_0124)
+    VALUE(P_0125)
+    VALUE(P_0126).
+  WA_FIELDCAT-COL_POS    = P_0124.
+  WA_FIELDCAT-FIELDNAME  = P_0123.
+  WA_FIELDCAT-SELTEXT_L  = P_0122.
+  WA_FIELDCAT-LOWERCASE  = 'X'.
+  WA_FIELDCAT-DO_SUM  = P_0125.
+  WA_FIELDCAT-NO_ZERO  = ' '.
+  WA_FIELDCAT-KEY  = P_0126.
+  APPEND WA_FIELDCAT TO IT_FIELDCAT.
+  CLEAR WA_FIELDCAT.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form display_alv
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM DISPLAY_ALV .
+  GD_REPID = SY-REPID.
+  WA_LAYOUT-ZEBRA = 'X' .
+  WA_LAYOUT-COLWIDTH_OPTIMIZE = 'X' .
+
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK       = ' '
+*     I_BYPASSING_BUFFER      = ' '
+*     I_BUFFER_ACTIVE         = ' '
+      I_CALLBACK_PROGRAM      = SY-REPID
+*     I_CALLBACK_PF_STATUS_SET    = ' '
+      I_CALLBACK_USER_COMMAND = 'FORM_USER_COMMAND'
+      I_CALLBACK_TOP_OF_PAGE  = 'TOP-OF-PAGE'
+*     i_callback_html_top_of_page = 'TOP-OF-PAGE'
+*     I_CALLBACK_HTML_END_OF_LIST = ' '
+*     I_STRUCTURE_NAME        =
+*     I_BACKGROUND_ID         = ' '
+*     I_GRID_TIT  LE                      = '
+*     I_GRID_SETTINGS         =
+      IS_LAYOUT               = WA_LAYOUT
+      IT_FIELDCAT             = IT_FIELDCAT
+*     IT_EXCLUDING            =
+*     IT_SPECIAL_GROUPS       =
+*     it_sort                 = i_sort
+*     IT_FILTER               =
+*     IS_SEL_HIDE             =
+*     I_DEFAULT               = 'X'
+      I_SAVE                  = 'A'
+      IS_VARIANT              = LV
+*     IT_EVENTS               =
+*     IT_EVENT_EXIT           =
+*     IS_PRINT                =
+*     IS_REPREP_ID            =
+*     I_SCREEN_START_COLUMN   = 0
+*     I_SCREEN_START_LINE     = 0
+*     I_SCREEN_END_COLUMN     = 0
+*     I_SCREEN_END_LINE       = 0
+*     I_HTML_HEIGHT_TOP       = 0
+*     I_HTML_HEIGHT_END       = 0
+*     IT_ALV_GRAPHICS         =
+*     IT_HYPERLINK            =
+*     IT_ADD_FIELDCAT         =
+*     IT_EXCEPT_QINFO         =
+*     IR_SALV_FULLSCREEN_ADAPTER  =
+* IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER =
+*     ES_EXIT_CAUSED_BY_USER  =
+    TABLES
+      T_OUTTAB                = IT_FINAL. "IT"
+* EXCEPTIONS
+*     PROGRAM_ERROR          = 1
+*     OTHERS                 = 2
+  .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+ENDFORM.
+
+
+
+
+
+
+
+FORM DISPLAY_ALV2 .
+  GD_REPID = SY-REPID.
+  WA_LAYOUT-ZEBRA = 'X' .
+  WA_LAYOUT-COLWIDTH_OPTIMIZE = 'X' .
+
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK       = ' '
+*     I_BYPASSING_BUFFER      = ' '
+*     I_BUFFER_ACTIVE         = ' '
+*     I_CALLBACK_PROGRAM      = SY-REPID
+*     I_CALLBACK_PF_STATUS_SET    = ' '
+*     I_CALLBACK_USER_COMMAND = 'FORM_USER_COMMAND'
+*     I_CALLBACK_TOP_OF_PAGE  = 'TOP-OF-PAGE'
+*     i_callback_html_top_of_page = 'TOP-OF-PAGE'
+*     I_CALLBACK_HTML_END_OF_LIST = ' '
+*     I_STRUCTURE_NAME        =
+*     I_BACKGROUND_ID         = ' '
+*     I_GRID_TIT  LE                      = '
+*     I_GRID_SETTINGS         =
+      IS_LAYOUT   = WA_LAYOUT
+      IT_FIELDCAT = IT_FIELDCAT
+      I_SAVE      = 'A'
+      IS_VARIANT  = LV
+    TABLES
+      T_OUTTAB    = MT2_ITEM. "IT"
+
+  .
+  IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+  ENDIF.
+ENDFORM.
+
+
+
+
+
+
+
+
+
+
+
+
+FORM TOP-OF-PAGE.
+*ALV Header declarations
+  DATA: T_HEADER      TYPE SLIS_T_LISTHEADER,
+        WA_HEADER     TYPE SLIS_LISTHEADER,
+        T_LINE        LIKE WA_HEADER-INFO,
+        LD_LINES      TYPE I,
+        LD_LINESC(30) TYPE C.
+
+* Title
+  WA_HEADER-TYP  = 'H'.
+
+  WA_HEADER-INFO = 'MN AUTO - PO Tracking Report'.
+  APPEND WA_HEADER TO T_HEADER.
+  CLEAR WA_HEADER.
+
+
+* Total No. of Records Selected
+  DESCRIBE TABLE IT_FINAL LINES LD_LINES.
+  LD_LINESC = LD_LINES.
+  CONCATENATE 'Total No. of Records Selected: ' LD_LINESC
+                    INTO T_LINE SEPARATED BY SPACE.
+  WA_HEADER-TYP  = 'A'.
+  WA_HEADER-INFO = T_LINE.
+  APPEND WA_HEADER TO T_HEADER.
+  CLEAR: WA_HEADER, T_LINE.
+
+  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+    EXPORTING
+      IT_LIST_COMMENTARY = T_HEADER.
+ENDFORM.
+
+
+
+FORM  FORM_USER_COMMAND  USING R_UCOMM TYPE SY-UCOMM
+                               R_SELFIELD TYPE SLIS_SELFIELD.
+
+  DATA : P_LAYOUT TYPE  SLIS_VARI .
+
+
+  CASE R_UCOMM.
+    WHEN '&IC1'.
+      CASE R_SELFIELD-FIELDNAME.
+
+        WHEN 'EBELP_I'.
+          LV_TRS = R_SELFIELD-VALUE.
+
+          READ TABLE IT_FINAL INTO DATA(WW_FINN) INDEX R_SELFIELD-TABINDEX .
+          CASE ABAP_TRUE .
+
+*              SUBMIT ZPO_INB_DETAILS WITH S_VGBEL IN S_EBELN WITH S_VGPOS = WW_FINN-EBELP_I AND RETURN.
+              SUBMIT ZPO_INB_DETAILS WITH S_VGBEL = WW_FINN-EBELN WITH S_VGPOS = WW_FINN-EBELP_I AND RETURN.
+
+          ENDCASE.
+
+        WHEN 'EBELP_2'.
+          LV_TRS = R_SELFIELD-VALUE.
+
+          READ TABLE IT_FINAL INTO DATA(WW_FINN1) INDEX R_SELFIELD-TABINDEX .
+
+          CASE ABAP_TRUE .
+
+*              SUBMIT ZPO_MIGO_DETAILS WITH  S_PO IN S_EBELN WITH S_PO_I = WW_FINN1-EBELP_I AND RETURN.
+              SUBMIT ZPO_MIGO_DETAILS WITH  S_PO = WW_FINN1-EBELN WITH S_PO_I = WW_FINN1-EBELP_I AND RETURN.
+
+          ENDCASE.
+
+        WHEN 'EBELP_3'.
+          LV_TRS = R_SELFIELD-VALUE.
+
+          READ TABLE IT_FINAL INTO DATA(WW_FINN2) INDEX R_SELFIELD-TABINDEX .
+
+          CASE ABAP_TRUE .
+
+*              SUBMIT ZPO_MIRO_DETAILS WITH  MIRO_PO IN S_EBELN WITH MIRO_POI = WW_FINN2-EBELP_I AND RETURN.
+              SUBMIT ZPO_MIRO_DETAILS WITH  MIRO_PO = WW_FINN2-EBELN WITH MIRO_POI = WW_FINN2-EBELP_I AND RETURN.
+
+          ENDCASE.
+
+      ENDCASE.
+  ENDCASE.
+ENDFORM.
