@@ -1,0 +1,624 @@
+*&---------------------------------------------------------------------*
+*& Report ZSTOCK_UPLOAD
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zstock_upload.
+
+PARAMETERS: p_file  TYPE rlgrap-filename OBLIGATORY.
+
+DATA:   bdcdata LIKE bdcdata    OCCURS 0 WITH HEADER LINE.
+*       messages of call transaction
+DATA:   messtab LIKE bdcmsgcoll OCCURS 0 WITH HEADER LINE.
+
+DATA:
+  oref_container   TYPE REF TO cl_gui_custom_container,
+  iref_control     TYPE REF TO i_oi_container_control,
+  iref_document    TYPE REF TO i_oi_document_proxy,
+  iref_spreadsheet TYPE REF TO i_oi_spreadsheet,
+  iref_error       TYPE REF TO i_oi_error.
+
+TYPES: BEGIN OF ty_data,
+         matnr     TYPE  matnr,
+         werks     TYPE werks_d,
+         lgort     TYPE lgort_d,
+         icharg    TYPE charg_d,
+         echarg    TYPE char30,
+         val_type  TYPE char10,
+         menge     TYPE menge_d,
+         bldat     TYPE char10,
+         budat     TYPE char10,
+         amount_lc TYPE bapi_exbwr,
+         bwart     TYPE bwart,
+         hsdat     TYPE char10,
+         sgtxt     TYPE mseg-sgtxt,
+       END OF ty_data.
+
+
+DATA:
+  gv_document_url TYPE c LENGTH 256,
+  gt_sheets       TYPE soi_sheets_table,
+  gs_sheets       TYPE soi_sheets,
+  gt_data         TYPE soi_generic_table,
+  gs_data         TYPE soi_generic_item,
+  gt_ranges       TYPE soi_range_list.
+
+DATA: gt_stock_upd TYPE TABLE OF ty_data.
+
+DATA gv_runid TYPE cvi_run_id.
+
+TYPES: BEGIN OF lty_output,
+         matnr  TYPE matnr,
+         werks  TYPE werks_d,
+         lgort  TYPE lgort_d,
+         charg  TYPE char50,
+         icharg TYPE charg_d,
+         text   TYPE char100,
+         reason TYPE char255,
+         mblnr  TYPE mseg-mblnr,
+       END OF lty_output,
+       ltt_output TYPE STANDARD TABLE OF lty_output.
+
+DATA: gt_output   TYPE ltt_output,
+      lt_fieldcat TYPE TABLE OF slis_fieldcat_alv.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+*  PERFORM f_get_filename.   "To get the file name from the selection screen
+
+*PARAMETERS: p_kunnr TYPE kna1-kunnr.
+  CALL FUNCTION 'F4_FILENAME'
+    EXPORTING
+      program_name  = sy-cprog
+      dynpro_number = sy-dynnr
+      field_name    = ' '
+    IMPORTING
+      file_name     = p_file.
+
+
+START-OF-SELECTION.
+
+  PERFORM f_upload_excel.
+
+* update material details into SAP
+  PERFORM update_batch_details.
+
+
+
+FORM f_upload_excel .
+
+
+  DATA : lt_tab   TYPE TABLE OF alsmex_tabline, "alsmex_tabline,
+*         lt_excel TYPE TABLE OF ty_excel,
+         ls_tab   TYPE alsmex_tabline, "alsmex_tabline,
+         ls_excel TYPE ty_data,
+         lv_index TYPE i.
+
+  FIELD-SYMBOLS : <fs> TYPE any  .
+*  REFRESH: gt_log.
+
+  CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+    EXPORTING
+      filename                = p_file
+      i_begin_col             = '1'
+      i_begin_row             = '2'
+      i_end_col               = '100'
+      i_end_row               = '9990'
+    TABLES
+      intern                  = lt_tab
+    EXCEPTIONS
+      inconsistent_parameters = 1
+      upload_ole              = 2
+      OTHERS                  = 3.
+  IF sy-subrc EQ 0.
+
+
+    IF lt_tab[] IS NOT INITIAL.
+      LOOP AT lt_tab INTO ls_tab.
+        MOVE ls_tab-col TO lv_index.
+
+        ASSIGN COMPONENT lv_index OF STRUCTURE ls_excel TO <fs>.
+        IF <fs> IS ASSIGNED.
+          <fs> = ls_tab-value.
+        ENDIF.
+
+        AT END OF row.
+          APPEND ls_excel TO gt_stock_upd.
+          CLEAR ls_excel.
+        ENDAT.
+        CLEAR : ls_tab.
+
+      ENDLOOP.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  SUB_FILE_F4
+*&---------------------------------------------------------------------*
+*       F4 help for file path
+*----------------------------------------------------------------------*
+FORM sub_file_f4 .
+  DATA:
+    l_desktop  TYPE string,
+    l_i_files  TYPE filetable,
+    l_wa_files TYPE file_table,
+    l_rcode    TYPE int4.
+
+* Finding desktop
+  CALL METHOD cl_gui_frontend_services=>get_desktop_directory
+    CHANGING
+      desktop_directory    = l_desktop
+    EXCEPTIONS
+      cntl_error           = 1
+      error_no_gui         = 2
+      not_supported_by_gui = 3
+      OTHERS               = 4.
+  IF sy-subrc <> 0.
+    MESSAGE e001(00) WITH
+        'Desktop not found'.
+  ENDIF.
+
+* Update View
+  CALL METHOD cl_gui_cfw=>update_view
+    EXCEPTIONS
+      cntl_system_error = 1
+      cntl_error        = 2
+      OTHERS            = 3.
+
+  CALL METHOD cl_gui_frontend_services=>file_open_dialog
+    EXPORTING
+      window_title            = 'Select Excel file'
+      default_extension       = '.xls'
+*     default_filename        =
+      file_filter             = '.xls'
+*     with_encoding           =
+      initial_directory       = l_desktop
+*     multiselection          =
+    CHANGING
+      file_table              = l_i_files
+      rc                      = l_rcode
+*     user_action             =
+*     file_encoding           =
+    EXCEPTIONS
+      file_open_dialog_failed = 1
+      cntl_error              = 2
+      error_no_gui            = 3
+      not_supported_by_gui    = 4
+      OTHERS                  = 5.
+  IF sy-subrc <> 0.
+    MESSAGE e001(00) WITH 'Error while opening file'.
+  ENDIF.
+
+  READ TABLE l_i_files INDEX 1 INTO l_wa_files.
+  IF sy-subrc = 0.
+    p_file = l_wa_files-filename.
+  ELSE.
+    MESSAGE e001(00) WITH 'Error while opening file'.
+  ENDIF.
+
+ENDFORM.                    " SUB_FILE_F4
+
+*&---------------------------------------------------------------------*
+*& Form UPDATE_material_DETAILS
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM update_batch_details .
+
+  PERFORM post_stock.
+  IF gt_stock_upd IS NOT INITIAL.
+*    UPDATE zmatbatch FROM TABLE gt_stock_upd.
+*    COMMIT WORK.
+    WRITE: 'Data Updated'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form GET_UPLOAD_BDATA
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*      -->P_GT_BASIC  text
+*&---------------------------------------------------------------------*
+FORM get_upload_bdata ." TABLES   gt_basic TYPE ty_basic
+
+  DATA: ls_basic   TYPE ty_data.
+
+  LOOP AT gt_data INTO gs_data.
+    IF gs_data-row > 1.
+*      gs_bp_general-bpartner = gs_data-row.
+      CASE gs_data-column.
+        WHEN 1.
+          ls_basic-matnr              = gs_data-value.
+        WHEN 2.
+          ls_basic-werks            = gs_data-value.
+        WHEN 3.
+          ls_basic-lgort         	 	=	gs_data-value.
+        WHEN 4.
+          ls_basic-echarg            = gs_data-value .
+        WHEN 5.
+          ls_basic-val_type            = gs_data-value .
+        WHEN 6.
+          ls_basic-menge   = gs_data-value .
+        WHEN 7.
+          ls_basic-budat   = gs_data-value.
+        WHEN 8.
+          ls_basic-bldat   = gs_data-value.
+        WHEN 9.
+          ls_basic-amount_lc   = gs_data-value.
+      ENDCASE.
+      AT END OF row.
+        APPEND ls_basic TO gt_stock_upd.
+        CLEAR ls_basic.
+      ENDAT.
+    ENDIF.
+  ENDLOOP.
+
+ENDFORM.
+
+
+FORM post_stock.
+
+  DATA(lt_material) = gt_stock_upd.
+  SORT lt_material BY matnr.
+  DELETE ADJACENT DUPLICATES FROM lt_material COMPARING matnr.
+
+  DATA: lv_objkey TYPE bapi1003_key-object_long,
+        lt_return TYPE TABLE OF bapiret2,
+        lv_msg    TYPE char200.
+
+  DATA: ls_header TYPE bapi2017_gm_head_01,
+        lt_item   TYPE TABLE OF bapi2017_gm_item_create,
+        ls_item   TYPE bapi2017_gm_item_create,
+        lv_doc    TYPE bapi2017_gm_head_ret-mat_doc,
+        lv_tcode  TYPE bapi2017_gm_code VALUE '05'.
+
+  IF 1 = 2.
+    LOOP AT lt_material ASSIGNING FIELD-SYMBOL(<lfs_material>).
+      lv_objkey = <lfs_material>-matnr.
+      CALL FUNCTION 'BAPI_OBJCL_CREATE'
+        EXPORTING
+*         OBJECTKEYNEW      =
+          objecttablenew    = 'MARA'
+          classnumnew       = 'BATCHNUMBR'
+          classtypenew      = '023'
+          status            = '1'
+*         STANDARDCLASS     =
+*         CHANGENUMBER      =
+          keydate           = sy-datum
+*         NO_DEFAULT_VALUES = ' '
+          objectkeynew_long = lv_objkey
+*     IMPORTING
+*         CLASSIF_STATUS    =
+        TABLES
+*         ALLOCVALUESNUM    =
+*         ALLOCVALUESCHAR   =
+*         ALLOCVALUESCURR   =
+          return            = lt_return.
+      READ TABLE lt_return WITH KEY type = 'E'
+                 TRANSPORTING NO FIELDS.
+      IF sy-subrc IS NOT INITIAL.
+*      lv_msg = |Material { <lfs_material>-matnr }updated with batch attribute|.
+*      WRITE: / lv_msg.
+        COMMIT WORK.
+      ELSE.
+*      lv_msg = |Material { <lfs_material>-matnr }not updated with batch attribute|.
+*      WRITE: / lv_msg.
+*      DELETE gt_stock_upd WHERE matnr = <lfs_material>-matnr.
+      ENDIF.
+    ENDLOOP.
+  ENDIF.
+
+*  WRITE: / 'Material update completed'.
+*  WRITE: / space.
+
+  DATA: lv_matnr TYPE matnr18.
+
+  LOOP AT gt_stock_upd ASSIGNING FIELD-SYMBOL(<lfs_stock_upd>).
+
+*    ls_header-pstng_date      = sy-datum.
+*    ls_header-doc_date        = sy-datum.
+    IF 1 = 2.
+      CALL FUNCTION 'CONVERT_DATE_TO_INTERNAL'
+        EXPORTING
+          date_external            = <lfs_stock_upd>-budat
+*         ACCEPT_INITIAL_DATE      =
+        IMPORTING
+          date_internal            = ls_header-pstng_date
+        EXCEPTIONS
+          date_external_is_invalid = 1
+          OTHERS                   = 2.
+
+      CALL FUNCTION 'CONVERT_DATE_TO_INTERNAL'
+        EXPORTING
+          date_external            = <lfs_stock_upd>-bldat
+*         ACCEPT_INITIAL_DATE      =
+        IMPORTING
+          date_internal            = ls_header-doc_date
+        EXCEPTIONS
+          date_external_is_invalid = 1
+          OTHERS                   = 2.
+
+    ENDIF.
+
+    ls_header-pstng_date = <lfs_stock_upd>-budat.
+    ls_header-doc_date = <lfs_stock_upd>-bldat.
+
+    ls_header-pr_uname        = sy-uname.
+    ls_header-ver_gr_gi_slip  = 2.
+    ls_header-ver_gr_gi_slipx = 'X'.
+
+*    ls_item-material_long   = <lfs_stock_upd>-matnr.
+    ls_item-material   = <lfs_stock_upd>-matnr.
+
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+      EXPORTING
+        input  = ls_item-material
+      IMPORTING
+        output = ls_item-material.
+
+
+
+    ls_item-plant      = <lfs_stock_upd>-werks.
+    ls_item-stge_loc   = <lfs_stock_upd>-lgort.
+    ls_item-move_type  = <lfs_stock_upd>-bwart.
+    ls_item-entry_qnt  = <lfs_stock_upd>-menge.
+    ls_item-amount_lc  = <lfs_stock_upd>-amount_lc.
+    ls_item-val_type  = <lfs_stock_upd>-val_type.
+    ls_item-batch      = <lfs_stock_upd>-icharg.
+    ls_item-stck_type  = 'F'.
+    ls_item-item_text  = <lfs_stock_upd>-sgtxt.
+
+    CALL FUNCTION 'CONVERT_DATE_TO_INTERNAL'
+      EXPORTING
+        date_external            = <lfs_stock_upd>-hsdat
+*       ACCEPT_INITIAL_DATE      =
+      IMPORTING
+        date_internal            = ls_item-prod_date
+      EXCEPTIONS
+        date_external_is_invalid = 1
+        OTHERS                   = 2.
+
+
+    ls_item-prod_date = <lfs_stock_upd>-hsdat.
+
+    APPEND ls_item TO lt_item.
+
+  ENDLOOP.
+
+  CALL FUNCTION 'BAPI_GOODSMVT_CREATE'
+    EXPORTING
+      goodsmvt_header  = ls_header
+      goodsmvt_code    = lv_tcode                "MB1B
+    IMPORTING
+      materialdocument = lv_doc
+    TABLES
+      goodsmvt_item    = lt_item
+      return           = lt_return.
+
+  IF lv_doc IS NOT INITIAL.
+    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+      EXPORTING
+        wait = abap_true.
+
+    LOOP AT gt_stock_upd ASSIGNING FIELD-SYMBOL(<lfs_stock_upd_01>).
+
+      SELECT SINGLE charg
+             FROM mseg
+             INTO @<lfs_stock_upd_01>-icharg
+             WHERE mblnr = @lv_doc
+               AND mjahr = '2019'
+               AND matnr = @<lfs_stock_upd_01>-matnr
+               AND lgort = @<lfs_stock_upd_01>-lgort.
+
+      APPEND VALUE #( matnr = <lfs_stock_upd_01>-matnr werks = <lfs_stock_upd_01>-werks lgort = <lfs_stock_upd_01>-lgort charg = <lfs_stock_upd_01>-echarg
+                      icharg = <lfs_stock_upd_01>-icharg text = 'Created' reason = lv_msg  mblnr = lv_doc ) TO gt_output.
+*      lv_msg = |Material { <lfs_stock_upd_01>-matnr } Plant { <lfs_stock_upd_01>-werks } batch { <lfs_stock_upd_01>-echarg } updated |.
+      DATA: ls_zmatbatch TYPE zmatbatch.
+      CLEAR: ls_zmatbatch.
+      ls_zmatbatch = CORRESPONDING #( <lfs_stock_upd_01> ).
+      MODIFY zmatbatch FROM ls_zmatbatch.
+**      WRITE: / lv_msg.
+*
+      PERFORM bdc_dynpro      USING 'SAPLCHRG' '1000'.
+      PERFORM bdc_field       USING 'BDC_OKCODE'
+                                    '=ENTR'.
+      PERFORM bdc_field       USING 'BDC_CURSOR'
+                                    'DFBATCH-CHARG'.
+      PERFORM bdc_field       USING 'DFBATCH-MATNR'
+                                    <lfs_stock_upd_01>-matnr.
+      PERFORM bdc_field       USING 'DFBATCH-CHARG'
+                                    <lfs_stock_upd_01>-icharg.
+      PERFORM bdc_field       USING 'DFBATCH-WERKS'
+                                    <lfs_stock_upd_01>-werks.
+      PERFORM bdc_dynpro      USING 'SAPLCHRG' '1000'.
+      PERFORM bdc_field       USING 'BDC_OKCODE'
+                                    '=CLAS'.
+      PERFORM bdc_field       USING 'BDC_CURSOR'
+                                    'DFBATCH-MHD_IO'.
+      PERFORM bdc_field       USING 'MCHA-LWEDT'
+                                    space.
+      PERFORM bdc_dynpro      USING 'SAPLCHRG' '1000'.
+      PERFORM bdc_field       USING 'BDC_OKCODE'
+                                    '=SAVE'.
+      PERFORM bdc_field       USING 'BDC_CURSOR'
+                                    'RCTMS-MWERT(01)'.
+      PERFORM bdc_field       USING 'RCTMS-MWERT(01)'
+                                    <lfs_stock_upd_01>-echarg.
+      PERFORM bdc_transaction USING 'MSC2N'.
+      READ TABLE messtab WITH KEY msgtyp = 'E'
+                         TRANSPORTING NO FIELDS.
+      CLEAR : bdcdata[], <lfs_stock_upd_01> .
+    ENDLOOP.
+  ELSE.
+
+    CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+*      lv_msg = |Material { <lfs_stock_upd_01>-matnr } Plant { <lfs_stock_upd_01>-werks } batch { <lfs_stock_upd_01>-echarg } not updated |.
+*      LOOP AT  lt_return ASSIGNING FIELD-SYMBOL(<lfs_return>) WHERE type = 'E'.
+*        lv_msg = |{ lv_msg } { <lfs_return>-message }|.
+*      ENDLOOP.
+
+*      APPEND VALUE #( matnr = <lfs_stock_upd_01>-matnr
+*                     werks = <lfs_stock_upd_01>-werks
+*                     lgort = <lfs_stock_upd_01>-lgort
+*                     charg = <lfs_stock_upd_01>-icharg
+*                     text = 'Not Created'
+*                     reason = lv_msg ) TO gt_output.
+
+    LOOP AT  lt_return ASSIGNING FIELD-SYMBOL(<lfs_return>) WHERE type = 'E'.
+
+      APPEND VALUE #(
+                  text = 'Not Created'
+                  reason = <lfs_return>-message ) TO gt_output.
+    ENDLOOP.
+    CLEAR: lv_msg, lt_return.
+*      EXIT.
+*      WRITE: / lv_msg.
+*      CONTINUE.
+
+    CLEAR: lv_msg, lt_return, lt_item, lv_doc, ls_header, ls_item, messtab, bdcdata[].
+
+  ENDIF.
+
+  PERFORM display_alv.
+
+ENDFORM.
+
+
+FORM bdc_dynpro USING program dynpro.
+  CLEAR bdcdata.
+  bdcdata-program  = program.
+  bdcdata-dynpro   = dynpro.
+  bdcdata-dynbegin = 'X'.
+  APPEND bdcdata.
+ENDFORM.
+
+FORM bdc_field USING fnam fval.
+  CLEAR bdcdata.
+  bdcdata-fnam = fnam.
+  bdcdata-fval = fval.
+  APPEND bdcdata.
+ENDFORM.
+
+
+
+
+FORM bdc_transaction USING tcode.
+  DATA: l_mstring(480).
+  DATA: l_subrc LIKE sy-subrc.
+  DATA: lx_auth_check TYPE REF TO cx_root.
+  DATA: l_auth_check_text TYPE string.
+* batch input session
+
+  REFRESH messtab.
+  TRY.
+      CALL TRANSACTION tcode WITH AUTHORITY-CHECK USING bdcdata
+                       MODE   'N'
+                       UPDATE 'L'
+                       MESSAGES INTO messtab.
+    CATCH cx_sy_authorization_error INTO lx_auth_check.
+*     Authorization missing for user when executing transaction
+      l_auth_check_text = lx_auth_check->get_text( ).
+      sy-subrc = 99.
+  ENDTRY.
+  l_subrc = sy-subrc.
+*  IF smalllog <> 'X'.
+  WRITE: / 'CALL_TRANSACTION',
+           tcode,
+           'returncode:'(i05),
+           l_subrc,
+           'RECORD:',
+           sy-index.
+  IF l_subrc <> 99.
+    LOOP AT messtab.
+      MESSAGE ID     messtab-msgid
+              TYPE   messtab-msgtyp
+              NUMBER messtab-msgnr
+              INTO l_mstring
+              WITH messtab-msgv1
+                   messtab-msgv2
+                   messtab-msgv3
+                   messtab-msgv4.
+      WRITE: / messtab-msgtyp, l_mstring(250).
+    ENDLOOP.
+  ELSE.
+    WRITE: / l_auth_check_text.
+  ENDIF.
+*    SKIP.
+*  ENDIF.
+** Erzeugen fehlermappe ************************************************
+*  IF l_subrc <> 0 AND l_subrc <> 99." AND e_group <> space.
+*    IF e_group_opened = ' '.
+*      CALL FUNCTION 'BDC_OPEN_GROUP'
+*        EXPORTING
+*          client   = sy-mandt
+*          group    = e_group
+*          user     = e_user
+*          keep     = e_keep
+*          holddate = e_hdate.
+*      e_group_opened = 'X'.
+*    ENDIF.
+*    CALL FUNCTION 'BDC_INSERT'
+*      EXPORTING
+*        tcode     = tcode
+*      TABLES
+*        dynprotab = bdcdata.
+*  ENDIF.
+
+  REFRESH bdcdata.
+ENDFORM.
+
+
+
+FORM display_alv .
+
+  DATA:
+    ls_layout   TYPE slis_layout_alv.
+
+  ls_layout-colwidth_optimize = 'X'.
+  ls_layout-zebra             = 'X'.
+
+  PERFORM build_fcatalog USING:
+         'MBLNR' 'LT_OUTPUT' 'Mat Document',
+         'MATNR' 'LT_OUTPUT' 'Material',
+         'WERKS' 'LT_OUTPUT' 'Plant',
+         'LGORT' 'LT_OUTPUT' 'Storage Location',
+         'CHARG' 'LT_OUTPUT' 'Rabwin Batch Number',
+         'ICHARG' 'LT_OUTPUT' 'Internal Batch Number',
+         'TEXT' 'LT_OUTPUT' 'Status',
+         'REASON' 'LT_OUTPUT' 'Reason'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = sy-repid
+      is_layout          = ls_layout
+      it_fieldcat        = lt_fieldcat
+    TABLES
+      t_outtab           = gt_output
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+            WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+ENDFORM.
+
+FORM build_fcatalog USING l_field l_tab l_text.
+
+  DATA: ls_fieldcat TYPE slis_fieldcat_alv.
+
+  ls_fieldcat-fieldname      = l_field.
+  ls_fieldcat-tabname        = l_tab.
+  ls_fieldcat-seltext_m      = l_text.
+
+  APPEND ls_fieldcat TO lt_fieldcat.
+
+ENDFORM.
