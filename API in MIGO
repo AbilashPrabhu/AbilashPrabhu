@@ -1,0 +1,428 @@
+  METHOD if_http_extension~handle_request.
+
+*
+*    DATA : it_migo_h TYPE TABLE OF zapi_migo_head,
+*           wa_migo_h TYPE zapi_migo_head.
+*
+*    DATA : it_migo TYPE TABLE OF zapi_migo_item,
+*           wa_migo TYPE zapi_migo_item.
+
+    TYPES : BEGIN OF ty_stru,
+              document_no             TYPE mblnr,
+              document_date           TYPE bldat,
+              posting_date            TYPE budat,
+              delivery_note           TYPE xblnr1,
+              bill_of_lading          TYPE frbnr1,
+              supplier                TYPE lifnr,
+              suppliername            TYPE name1,
+              header_text             TYPE bktxt,
+              purchasinggrp           TYPE migo_buyer,
+              orderedby               TYPE migo_pousername,
+              enteredby               TYPE char10,
+              createdon               TYPE char20,
+              transactioncode         TYPE char10,
+              transactiondesc         TYPE char30,
+              accountingdocument      TYPE belnr_d,
+              controlandmaterialledge TYPE belnr_d,
+              objecttypetext          TYPE char20,
+              mat_short_text          TYPE sgtxt,
+              material                TYPE matnr,
+              qty_in_une              TYPE char20,
+              euom                    TYPE meins,
+              sloc                    TYPE lgort_d,
+              sloc_desc               TYPE char20,
+              direction               TYPE char2,
+              cost_center             TYPE kostl,
+              cost_centerdesc         TYPE char20,
+              profitcenter            TYPE prctr,
+              gl_account              TYPE saknr,
+              gl_accountdesc          TYPE char40,
+              movement                TYPE bwart,
+              stocktype               TYPE mb_insmk,
+              stocktype_desc          TYPE char20,
+              specialstock            TYPE sobkz,
+              specialstockdesc        TYPE char40,
+              deliverynoteqty         TYPE char20,
+*              delcomplinpoitem        TYPE char1,
+              delcomplinpoitemdesc    TYPE char5,
+              ref_doc                 TYPE lfbnr,
+              quantity                TYPE char15,
+              received                TYPE char15,
+              po_no                   TYPE ebeln,
+              item                    TYPE char4,
+              materialgrp             TYPE matkl,
+              materialgrpdesc         TYPE char30,
+              quantityordered         TYPE char15,
+              grquantity              TYPE char15,
+              amot_in_lo_cur          TYPE char20,
+              qtyinunitofentry        TYPE char15,
+              qtyinsku                TYPE char15,
+              unloadingpoint          TYPE ablad,
+              goodsrecipitent         TYPE wempf,
+              reasonformovement       TYPE mb_grbew,
+              text                    TYPE sgtxt,
+              requisitioner           TYPE char10,
+              vendor                  TYPE lifnr,
+              receivingvendor         TYPE lifnr,
+              reservation             TYPE rsnum,
+              requirementqty          TYPE char15,
+              withdrawalqty           TYPE char15,
+              createdby               TYPE migo_username,
+              frommaterial            TYPE matnr,
+              materialdesc            TYPE char40,
+              fromplant               TYPE werks_d,
+              plantname               TYPE char30,
+              fromstoragelocation     TYPE lgort_d,
+              storagelocationdesc     TYPE char20,
+              storagebin              TYPE lgpbe,
+              destmaterial            TYPE matnr,
+              materialdesc1           TYPE char40,
+              destplant               TYPE werks_d,
+              plantname1              TYPE char30,
+              deststoragelocation     TYPE lgort_d,
+              storagelocationdesc1    TYPE char20,
+              storagebin1             TYPE lgpbe,
+
+
+*
+*              plant                   TYPE werks_d,
+*              order_quantity          TYPE char20,
+*              order_type              TYPE bsart,
+*              order_type_desc         TYPE char20,
+*              supplier1               TYPE lifnr,
+*              supplier1_name          TYPE name1,
+*              document_date1          TYPE aedat,
+*              info_record             TYPE infnr,
+*              net_price               TYPE char20,
+*              request_line_item       TYPE bnfpo,
+*              movement_type           TYPE bwart,
+*              material_doc            TYPE mblnr,
+*              posting_date1           TYPE budat,
+*              order_uom               TYPE meins,
+*              qty_in_opun             TYPE char20,
+*              amount                  TYPE char20,
+*              con_control             TYPE ebtyp,
+*              delivery_date2          TYPE bbein,
+*              quantity1               TYPE char20,
+*              inboud_delivery_no      TYPE vbeln_vl,
+*              referecne               TYPE xblnr_long,
+*              created_on              TYPE bberd,
+*              inboud_delivery_no1     TYPE vbeln_vl,
+*              supplier2               TYPE lifnr,
+*              supplier2_name          TYPE name1,
+*              delivery_date           TYPE lfdat_v,
+*              material1               TYPE matnr,
+*              delivery_quantity       TYPE char20,
+*              suom                    TYPE meins,
+*              reference_doc           TYPE vgbel,
+*              plant1                  TYPE werks_d,
+*              sloc1                   TYPE lgort_d,
+            END OF ty_stru.
+
+
+    DATA : wa_item TYPE ty_stru,
+           it_item TYPE TABLE OF ty_stru.
+
+
+    CALL METHOD me->get_userdetails
+      EXPORTING
+        server   = server           " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        fromdate = DATA(fromdate)             " ABAP system field: Current date of application server
+        todate   = DATA(todate).             " Posting Date in the Document
+
+    DATA: s_date TYPE RANGE OF sy-datum.
+
+    APPEND VALUE #( sign = 'I' option = 'BT' low = fromdate high = todate ) TO s_date.
+
+
+
+    SELECT a~mblnr,
+           a~bldat,
+           a~budat,
+           a~xblnr,
+           a~frbnr,
+           a~bktxt,
+           a~cpudt,
+           a~cputm,
+           a~usnam,
+           a~tcode2,
+           b~zeile,
+           b~sgtxt,
+           b~wempf,
+           b~matnr,
+           b~menge,
+           b~erfmg,
+           b~bpmng,
+           b~meins,
+           b~lgort,
+           b~dmbtr,
+           b~ablad,
+           b~kostl,
+           b~sakto,
+           b~sobkz,
+           b~SHKZG,
+           b~bwart,
+           b~insmk,
+           b~lfbnr,
+           b~werks,
+           b~lifnr,
+           b~emlif,
+           b~elikz,
+           b~lfbja,
+           b~lsmng,
+           b~ebeln,
+           b~ebelp,
+           b~grund,
+           b~prctr,
+           b~budat_mkpf,
+           b~vbelp_im,
+           b~rsnum,
+           c~bsart,
+           c~lifnr AS lifnr1,
+           c~aedat,
+           c~bedat,
+           c~waers,
+           c~wkurs,
+           c~ekgrp,
+           c~ERNAM,
+           d~infnr,
+           d~netpr,
+           d~bnfpo,
+           e~ebtyp,
+           e~menge AS menge1,
+           e~eindt,
+           e~vbeln,
+           e~erdat AS erdat1,
+           e~xblnr AS xblnr1,
+           f~matkl
+        FROM mkpf AS a
+        LEFT OUTER JOIN mseg AS b
+        ON ( a~mblnr = b~mblnr )
+        LEFT OUTER JOIN ekko AS c
+        ON ( b~ebeln = c~ebeln )
+        LEFT OUTER JOIN ekpo AS d
+        ON ( b~ebeln = d~ebeln AND b~ebelp = d~ebelp )
+        LEFT OUTER JOIN ekes AS e
+        ON ( b~vbeln_im = e~vbeln AND b~vbelp_im = e~vbelp )
+        LEFT OUTER JOIN mara AS f
+        ON ( b~matnr = f~matnr )
+        INTO TABLE @DATA(it_mkpf)
+        WHERE a~budat IN @s_date  AND b~bwart <> '101' AND b~bwart <> '102'."c~bsart IN ( 'ZDOM','ZIMP' ) ."AND b~ebeln NE ''
+
+*    delete it_mkpf WHERE bwart = '101'.
+
+    LOOP AT it_mkpf INTO DATA(wa_mkpf).
+
+      wa_item-document_no           = wa_mkpf-mblnr.
+      wa_item-document_date         = wa_mkpf-bldat.
+      wa_item-posting_date          = wa_mkpf-budat.
+      wa_item-delivery_note         = wa_mkpf-xblnr.
+      wa_item-DIRECTION             = wa_mkpf-SHKZG.
+      wa_item-RESERVATION           = wa_mkpf-rsnum.
+      SELECT SINGLE belnr FROM bkpf INTO wa_item-accountingdocument WHERE xblnr = wa_mkpf-xblnr.
+      wa_item-bill_of_lading        = wa_mkpf-frbnr.
+      wa_item-supplier              = wa_mkpf-lifnr.
+      wa_item-vendor                = wa_mkpf-lifnr.
+      wa_item-receivingvendor       = wa_mkpf-lifnr.
+      SELECT SINGLE name1 FROM lfa1 INTO wa_item-suppliername WHERE lifnr =  wa_mkpf-lifnr.
+      wa_item-enteredby             = wa_mkpf-usnam.
+      wa_item-createdon             = |{ wa_mkpf-cpudt } & { wa_mkpf-cputm }|.
+      wa_item-transactioncode       = wa_mkpf-tcode2.
+
+      IF wa_item-transactioncode = 'MIGO_GR'.
+        wa_item-transactiondesc  = 'Goods Movement'.
+      ENDIF.
+
+*      wa_item-PURCHASINGGRP         = wa_mkpf-EKGRP.
+      SELECT SINGLE EKNAM FROM T024 INTO wa_item-PURCHASINGGRP WHERE EKGRP = wa_mkpf-EKGRP.
+      wa_item-ORDEREDBY           = wa_mkpf-ERNAM.
+
+      SELECT SINGLE belnr FROM cobk INTO wa_item-controlandmaterialledge WHERE refbn = wa_mkpf-mblnr.
+
+      wa_item-header_text           = wa_mkpf-bktxt.
+      wa_item-material              = wa_mkpf-matnr.
+      SELECT SINGLE maktx FROM makt INTO wa_item-mat_short_text WHERE matnr = wa_mkpf-matnr.
+      IF wa_mkpf-bwart = '101' OR wa_mkpf-bwart = '102'.
+        wa_item-grquantity            = wa_mkpf-menge.
+      ENDIF.
+      wa_item-qtyinsku              = wa_mkpf-menge.
+      wa_item-qtyinunitofentry      = wa_mkpf-menge.
+      wa_item-QTY_IN_UNE            = wa_mkpf-ERFMG.
+      wa_item-euom                  = wa_mkpf-meins.
+      wa_item-sloc                  = wa_mkpf-lgort.
+      SELECT SINGLE lgobe FROM t001l INTO wa_item-sloc_desc WHERE lgort = wa_item-sloc.
+      wa_item-cost_center           = wa_mkpf-kostl.
+
+      IF wa_item-cost_center = '1100'.
+        wa_item-cost_centerdesc = 'M.N. APPL'.
+      ELSEIF wa_item-cost_center = '1200'.
+        wa_item-cost_centerdesc = 'MN BOUGHTOUT'.
+      ELSEIF wa_item-cost_center = 'WKC01' OR wa_item-cost_center = 'WKC02'.
+        wa_item-cost_centerdesc = 'PRODUCTION'.
+      ENDIF.
+
+      wa_item-profitcenter          = wa_mkpf-prctr.
+      wa_item-gl_account            = wa_mkpf-sakto.
+      SELECT SINGLE txt50 FROM gl_acct_ca_text INTO wa_item-gl_accountdesc WHERE saknr = wa_item-gl_account.
+      wa_item-movement              = wa_mkpf-bwart.
+      wa_item-supplier              = wa_mkpf-lifnr.
+      wa_item-stocktype             = wa_mkpf-insmk.
+      IF wa_item-stocktype = 'X'.
+        wa_item-stocktype_desc = 'Quality inspection'.
+      ELSEIF wa_item-stocktype = 'S'.
+        wa_item-stocktype_desc = 'Blocked'.
+      ELSEIF wa_item-stocktype = '2'.
+        wa_item-stocktype_desc = 'Quality inspection'.
+      ELSEIF wa_item-stocktype = '3'.
+        wa_item-stocktype_desc = 'Blocked'.
+      ELSEIF wa_item-stocktype = ' '.
+        wa_item-stocktype_desc = 'Unrestricted-use'.
+      ELSEIF wa_item-stocktype = 'F'.
+        wa_item-stocktype_desc = 'Unrestricted-use'.
+      ENDIF.
+
+      wa_item-specialstock          = wa_mkpf-sobkz.
+      SELECT SINGLE sotxt FROM t148t INTO wa_item-specialstockdesc WHERE sobkz = wa_item-specialstock AND spras = sy-langu.
+
+      SELECT SINGLE elikz,menge FROM ekpo INTO @DATA(wa_po) WHERE ebeln = @wa_mkpf-ebeln AND ebelp = @wa_mkpf-ebelp AND matnr = @wa_mkpf-matnr.
+      IF wa_po-elikz = 'X'.
+        wa_item-delcomplinpoitemdesc      = 'YES'.
+      ELSE.
+        wa_item-delcomplinpoitemdesc      = 'NO'.
+      ENDIF.
+      wa_item-quantityordered         = wa_po-menge.
+
+      wa_item-text                  = wa_mkpf-sgtxt.
+      wa_item-goodsrecipitent       = wa_mkpf-wempf.
+      wa_item-reasonformovement     = wa_mkpf-grund.
+      wa_item-vendor                = wa_mkpf-lifnr.
+      wa_item-ref_doc               = wa_mkpf-lfbja.
+      wa_item-deliverynoteqty       = wa_mkpf-lsmng.
+      wa_item-received              = wa_mkpf-lsmng.
+      wa_item-po_no                 = wa_mkpf-ebeln.
+      wa_item-item                  = wa_mkpf-ebelp.
+      wa_item-materialgrp           = wa_mkpf-matkl.
+      SELECT SINGLE wgbez FROM t023t INTO wa_item-materialgrpdesc WHERE matkl = wa_item-materialgrp.
+
+      wa_item-quantity              = wa_mkpf-menge.
+      IF wa_mkpf-dmbtr IS NOT INITIAL.
+        wa_item-amot_in_lo_cur        = wa_mkpf-dmbtr / 100.
+      ENDIF.
+
+      IF wa_mkpf-bwart = '309' OR wa_mkpf-bwart = '321'.
+        SELECT a~mblnr,
+               a~bwart,
+               a~xauto,
+               a~matnr,
+               a~werks,
+               a~lgort,
+               b~maktx,
+               c~lgobe,
+               d~name1,
+               e~lgpbe
+          FROM mseg AS a
+          LEFT OUTER JOIN makt AS b
+          ON ( a~matnr = b~matnr AND spras = @sy-langu )
+          LEFT OUTER JOIN t001l AS c
+          ON ( a~lgort = c~lgort )
+          LEFT OUTER JOIN t001w AS d
+          ON ( a~werks = d~werks )
+          LEFT OUTER JOIN mard AS e
+          ON ( a~matnr = e~matnr AND a~LGORT = e~LGORT )
+          INTO TABLE @DATA(it_ptop)
+          WHERE mblnr = @wa_mkpf-mblnr.
+
+        SORT it_ptop BY mblnr xauto.
+        DELETE ADJACENT DUPLICATES FROM it_ptop COMPARING mblnr xauto.
+
+        LOOP AT it_ptop INTO DATA(wa_ptop).
+          IF sy-tabix = 1.
+            wa_item-frommaterial            = wa_ptop-matnr.
+            wa_item-materialdesc            = wa_ptop-maktx.
+            wa_item-fromplant               = wa_ptop-werks.
+            wa_item-plantname               = wa_ptop-name1.
+            wa_item-fromstoragelocation     = wa_ptop-lgort.
+            wa_item-storagelocationdesc     = wa_ptop-lgobe.
+            wa_item-storagebin              = wa_ptop-lgpbe.
+          ENDIF.
+
+          IF sy-tabix = 2.
+           if wa_item-frommaterial <> wa_ptop-matnr.
+            wa_item-destmaterial            = wa_ptop-matnr.
+            wa_item-materialdesc1           = wa_ptop-maktx.
+            wa_item-destplant               = wa_ptop-werks.
+            wa_item-plantname1              = wa_ptop-name1.
+           endif.
+            wa_item-fromstoragelocation     = wa_ptop-lgort.
+            wa_item-storagelocationdesc1    = wa_ptop-lgobe.
+            wa_item-storagebin1             = wa_ptop-lgpbe.
+          ENDIF.
+
+        ENDLOOP.
+      ENDIF.
+
+        CONDENSE : wa_item-deliverynoteqty, wa_item-quantity, wa_item-grquantity, wa_item-amot_in_lo_cur, wa_item-qtyinunitofentry,wa_item-qtyinsku,
+                   wa_item-Requirementqty, wa_item-Withdrawalqty, wa_item-quantityordered, wa_item-received.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          input  = wa_item-material
+        IMPORTING
+          output = wa_item-material.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          input  = wa_item-po_no
+        IMPORTING
+          output = wa_item-po_no.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          input  = wa_item-profitcenter
+        IMPORTING
+          output = wa_item-profitcenter.
+
+
+      APPEND wa_item TO it_item.
+      CLEAR : wa_item,wa_po.
+
+    ENDLOOP.
+
+    SORT it_item BY document_no ASCENDING.
+
+
+
+
+    DATA(json_writer) = cl_sxml_string_writer=>create(
+                       type = if_sxml=>co_xt_json ).
+    CALL TRANSFORMATION id SOURCE result = it_item
+                           RESULT XML json_writer.
+    DATA(json) = json_writer->get_output( ).
+
+    DATA: lo_json_data TYPE REF TO zcl_trex_json_serializer,
+          json1        TYPE string.
+
+    CREATE OBJECT lo_json_data
+      EXPORTING
+        data = it_item.
+
+* serialize data
+
+    lo_json_data->serialize( ).
+
+* get serialized json data string
+
+    json1 = lo_json_data->get_data( ).
+
+    server->response->set_cdata(
+         data = json1 ).
+
+
+
+
+
+  ENDMETHOD.
