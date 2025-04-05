@@ -1,0 +1,560 @@
+  METHOD if_http_extension~handle_request.
+
+
+    CALL METHOD me->get_userdetails
+      EXPORTING
+        server = server            " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        lifnr  = DATA(lifnr).       " Account Number of Supplier.
+
+
+
+
+    TYPES : BEGIN OF ty_lifnr,
+              business_partner           TYPE lifnr,
+              display_bp_role            TYPE char30,
+              title                      TYPE ad_titletx,
+              name                       TYPE bu_namegr1,
+              name2                      TYPE bu_namegr2,
+              salutation                 TYPE bu_title_let,
+              search_term1               TYPE char40,
+              search_term2               TYPE char40,
+              house_no                   TYPE char15,
+              street                     TYPE ad_street,
+              street2                    TYPE ad_strspp1,
+              street3                    TYPE ad_strspp2,
+              street4                    TYPE ad_strspp3,
+              street5                    TYPE ad_strspp3,
+              postal_code                TYPE char20,
+              City                       TYPE char25,
+              country                    TYPE char20,
+              region                     TYPE char30,
+              time_zone                  TYPE ad_tzone,
+              telephone                  TYPE char20,
+              mobile_phone1              TYPE char10,
+              mobile_phone2              TYPE char10,
+              email                      TYPE char40,
+              address_valid_from         TYPE char10,
+              address_valid_to           TYPE char10,
+              email1                     TYPE char40,
+              mobile_phone               TYPE char10,
+              standard_address           TYPE char50,
+              billing_address            TYPE char50,
+              supplier_ret_to_add        TYPE char50,
+              category                   TYPE char10,
+              name1                      TYPE char50,
+              tax_number                 TYPE char20,
+              id                         TYPE char10,
+              c_r                        TYPE char10,
+              bank_key                   TYPE char10,
+              bank_acc                   TYPE char30,
+              control_key                TYPE char10,
+              alisa                      TYPE char10,
+              reference_details          TYPE char10,
+              account_holder             TYPE char20,
+              account_name               TYPE char20,
+              valid_from                 TYPE char10,
+              valid_to                   TYPE char10,
+              change_on                  TYPE char10,
+              name_finance_inst          TYPE char30,
+              archiving_flag             TYPE char1,
+              central_block              TYPE char1,
+              not_released               TYPE char1,
+              end_date                   TYPE char10,
+              account_group              TYPE ktokk,
+              central_del_block          TYPE char1,
+              central_deletion_flag      TYPE char1,
+              wtax_type                  TYPE witht,
+              wtax_code                  TYPE wt_withcd,
+              subject                    TYPE wt_subjct,
+              name_code                  TYPE char10,
+              pan                        TYPE j_1ipanno,
+              section_code               TYPE char10,
+              exemption_number           TYPE wt_exnr,
+              exemption_rate             TYPE char8,
+              expempt_from               TYPE wt_exdf,
+              expempt_to                 TYPE wt_exdt,
+              exemption_reason           TYPE wt_wtexrs,
+              purch_organization         TYPE ekorg,
+              purch_organization_desc    TYPE char20,
+              order_currency             TYPE bstwa,
+              order_currency_desc        TYPE char30,
+              payment_terms              TYPE dzterm,
+              payment_terms_desc         TYPE char30,
+              inco_terms                 TYPE inco1,
+              inco_terms_desc            TYPE char20,
+              incoterms_location_1       TYPE inco2_l,
+              grbased_inv_verif          TYPE webre,
+              delete_flag_purch_org      TYPE loevm_m,
+              delete_flag_purch_org_desc TYPE char5,
+              schema_group_supplier      TYPE kalsk,
+              schema_group_supplier_desc TYPE char20,
+              sort_criterion_mat         TYPE skrit,
+              sort_criterion_mat_desc    TYPE char20,
+              confirmation_control       TYPE bstae,
+              confirmation_control_desc  TYPE char20,
+
+              pan1                       TYPE j_1ipanno,
+              company_code               TYPE bukrs,
+              company_code_desc          TYPE char20,
+              customer_no                TYPE kunnr,
+              customer_no_desc           TYPE char40,
+              reconciliation             TYPE akont,
+              reconciliation_desc        TYPE char30,
+              payment_terms1             TYPE dzterm,
+              payment_terms_desc1        TYPE char30,
+              payment_block              TYPE dzahls,
+              payment_block_desc1        TYPE char25,
+*              Check_Double Invoice       TYPE
+              sales_district             TYPE bzirk,
+              sales_district_desc        TYPE char25,
+              customer_group             TYPE kdgrp,
+              customer_group_desc        TYPE kdgrp,
+              sales_office               TYPE vkbur,
+              sales_office_desc          TYPE char25,
+              sales_group                TYPE vkgrp,
+              sales_group_desc           TYPE char25,
+              order_probability          TYPE awahr,
+              currency                   TYPE waers_v02d,
+              currency_desc              TYPE char25,
+              exchange_rate_type         TYPE kurst,
+              exchange_rate_type_desc    TYPE char20,
+              price_group                TYPE konda,
+              price_group_desc           TYPE char20,
+              Price_list                 TYPE pltyp,
+              Price_list_desc            TYPE char30,
+              cut_pric_procedure         TYPE kalks,
+              cut_pric_procedure_desc    TYPE char20,
+              delivery_priority          TYPE lprio,
+              delivery_priority_desc     TYPE char20,
+              order_combination          TYPE kzazu_d,
+              delivery_plant             TYPE dwerk_ext,
+              delivery_plant_desc        TYPE char20,
+              shipping_condition         TYPE vsbed,
+              shipping_condition_desc    TYPE char20,
+              incoterms1                 TYPE inco1,
+              incoterms_desc             TYPE char20,
+              incoterms_location_2       TYPE inco2_l,
+              payment_terms2             TYPE dzterm,
+              payment_terms_desc2        TYPE char20,
+              acct_assmt_grp_cust        TYPE ktgrd,
+              acct_assmt_grp_cust_desc   TYPE char20,
+              dep_ctry_reg               TYPE aland,
+              tax_classification         TYPE char50,
+              tax_category               TYPE tatyp,
+              all_sales_areas            TYPE aufsd_v,
+              selected_sales_area        TYPE aufsd_v,
+              all_sales_areas_db         TYPE lifsd_x,
+              selected_sales_area_db     TYPE lifsd_x,
+              all_sales_areas_bb         TYPE faksd_x,
+              selected_sales_area_bb     TYPE faksd_x,
+              all_sales_areas_ssa        TYPE cassd_x,
+              selected_sales_area_ssa    TYPE cassd_x,
+              Profession                 TYPE PROFS,
+
+
+
+            END OF ty_lifnr.
+
+
+    DATA : it_lifnr TYPE TABLE OF ty_lifnr,
+           wa_lifnr TYPE ty_lifnr.
+
+    TRANSLATE lifnr TO UPPER CASE.
+
+
+    IF lifnr+0(1) NE 'C'.
+
+      SELECT a~lifnr           ,                         " as  business_partner,
+             a~anred           ,                         " as Display_bp_role,
+             a~name1           ,                         " as name,
+             a~name2           ,                         " as name2,
+             a~adrnr           ,                         " as address no,
+             a~J_1IPANNO       ,                         " as pan no,
+             b~title_let       ,                         " as title,
+             b~bu_sort1        ,                         " as salutation,
+             b~bu_sort2        ,                         " as search_term1_2,
+             b~xdele           ,                         " as archiving flag,
+             b~xblck           ,                         " as central block,
+             b~not_released    ,                         " as not released,
+             c~street          ,                         " as Street,
+             c~house_num1      ,                         " as House_number,
+             c~str_suppl1      ,                         " as Street_2,
+             c~str_suppl2      ,                         " as Street_3,
+             c~str_suppl3      ,                         " as Street_4,
+             c~post_code1      ,                         " as Postal_code,
+             c~city1           ,                         " as city,
+             c~COUNTRY         ,                         " as country,
+             c~REGION           ,                         " as region,
+             c~time_zone       ,                         " as Time_zone,
+             c~tel_number      ,                         " as Telephone ,
+             a~telf1           ,                         " as Mobile_phone_1 ,
+             a~telf2           ,                         " as Mobile_phone_2 ,
+             a~erdat           ,                         " as Address_Valid_from,
+             c~date_to         ,                         " as Address_Valid_to,
+             d~smtp_addr       ,                         " as E_mail ,
+             e~taxtype         ,                         " as category,
+             e~taxnum          ,                         " as Tax_Number,
+             f~text            ,                         " as name_taxtype,
+             g~bkvid           ,                         " as ID,
+             g~banks           ,                         " as c_r,
+             g~bankl           ,                         " as bank_key,
+             g~bankn           ,                         " as bank_Acct,
+             g~bkont           ,                         " as Control_Key,
+             g~alias_is_used   ,                         " as alias,
+             g~bkref           ,                         " as Reference_Details,
+             g~koinh           ,                         " as Account_holder,
+             g~accname         ,                         " as Account_name,
+             g~bk_valid_from   ,                         " as Valid_From,
+             g~bk_valid_to     ,                         " as Valid_To,
+             g~bk_move_date    ,                         " as change_ON,
+             h~banka           ,                         " as Name_Of_financial_Institutions
+             a~PROFS                                     " profession,
+
+        FROM lfa1 AS a
+        LEFT OUTER JOIN but000 AS b
+        ON ( a~lifnr = b~partner )
+        LEFT OUTER JOIN adrc AS c
+        ON ( a~adrnr = c~addrnumber )
+        LEFT OUTER JOIN adr6 AS d
+        ON ( a~adrnr = d~addrnumber )
+        LEFT OUTER JOIN dfkkbptaxnum AS e
+        ON ( a~lifnr = e~partner )
+        LEFT OUTER JOIN tfktaxnumtype_t AS f
+        ON ( e~taxtype = f~taxtype AND f~spras = @sy-langu )
+        LEFT OUTER JOIN but0bk AS g
+        ON ( a~lifnr = g~partner )
+        LEFT OUTER JOIN bnka AS h
+        ON ( g~bankl = h~bankl )
+        INTO TABLE @DATA(it_lfa1).
+*        WHERE a~lifnr = @lifnr.
+*        WHERE a~lifnr = .
+
+    ELSEIF lifnr+0(1) = 'C'.
+
+      SELECT a~kunnr         AS lifnr  ,                   "      as  business_partner,
+             a~anred           ,                   "      as title,
+             a~name1           ,                   "      as name,
+             a~name2           ,                   "      as name2,
+             a~adrnr           ,                   "      as address no,
+             a~J_1IPANNO       ,                   "      as pan no,
+             b~title_let       ,                   "      as salutation,
+             b~bu_sort1        ,                   "      as search_term1,
+             b~bu_sort2        ,                   "      as search_term2,
+             b~xdele           ,                   "      as search_term2,
+             b~xblck           ,                   "      as search_term2,
+             b~not_released    ,                   "      as search_term2,
+             c~street          ,                   "      as Street,
+             c~house_num1      ,                   "      as House_number,
+             c~str_suppl1      ,                   "      as Street_2,
+             c~str_suppl2      ,                   "      as Street_3,
+             c~str_suppl3      ,                   "      as Street_4,
+             c~post_code1      ,                   "      as Postal_code,
+             c~city1           ,                   "      as city,
+             c~COUNTRY         ,                   "      as country,
+             c~REGION          ,                   "      as region,
+             c~time_zone       ,                   "      as Time_zone,
+             c~tel_number      ,                   "      as Telephone ,
+             a~telf1           ,                   "      as Mobile_phone_1 ,
+             a~telf2           ,                   "      as Mobile_phone_2 ,
+             a~erdat           ,                   "      as Address_Valid_from,
+             c~date_to         ,                   "      as Address_Valid_to,
+             d~smtp_addr       ,                   "      as E_mail ,
+             e~taxtype         ,                   "      as category,
+             e~taxnum          ,                   "      as Tax_Number,
+             f~text            ,                   "      as name_taxtype,
+             g~bkvid           ,                   "      as ID,
+             g~banks           ,                   "      as c_r,
+             g~bankl           ,                   "      as bank_key,
+             g~bankn           ,                   "      as bank_Acct,
+             g~bkont           ,                   "      as Control_Key,
+             g~alias_is_used   ,                   "      as alias,
+             g~bkref           ,                   "      as Reference_Details,
+             g~koinh           ,                   "      as Account_holder,
+             g~accname         ,                   "      as Account_name,
+             g~bk_valid_from   ,                   "      as Valid_From,
+             g~bk_valid_to     ,                   "      as Valid_To,
+             g~bk_move_date    ,                   "      as change_ON,
+             h~banka                               "      as Name_Of_financial_Institutions
+
+        FROM kna1 AS a
+        LEFT OUTER JOIN but000 AS b
+        ON ( a~kunnr = b~partner )
+        LEFT OUTER JOIN adrc AS c
+        ON ( a~adrnr = c~addrnumber )
+        LEFT OUTER JOIN adr6 AS d
+        ON ( a~adrnr = d~addrnumber )
+        LEFT OUTER JOIN dfkkbptaxnum AS e
+        ON ( a~kunnr = e~partner )
+        LEFT OUTER JOIN tfktaxnumtype_t AS f
+        ON ( e~taxtype = f~taxtype AND f~spras = @sy-langu )
+        LEFT OUTER JOIN but0bk AS g
+        ON ( a~kunnr = g~partner )
+        LEFT OUTER JOIN bnka AS h
+        ON ( g~bankl = h~bankl )
+        INTO TABLE @it_lfa1.
+*        WHERE a~kunnr = @lifnr.
+
+    ENDIF.
+
+
+    LOOP AT it_lfa1 INTO DATA(wa_lfa1).
+
+      wa_lifnr-business_partner      = wa_lfa1-lifnr.
+*       wa_lifnr- Display_bp_role       = wa_lfa1-.
+      wa_lifnr-title                 = wa_lfa1-anred.
+      wa_lifnr-name                  = wa_lfa1-name1.
+      wa_lifnr-name2                 = wa_lfa1-name2.
+      wa_lifnr-Profession            = wa_lfa1-PROFS.
+      wa_lifnr-salutation            = wa_lfa1-title_let.
+      wa_lifnr-search_term1          = wa_lfa1-bu_sort1.
+      wa_lifnr-search_term2          = wa_lfa1-bu_sort2.
+      wa_lifnr-street                = wa_lfa1-street.
+      wa_lifnr-house_no              = wa_lfa1-house_num1.
+      wa_lifnr-street2               = wa_lfa1-str_suppl1.
+      wa_lifnr-street3               = wa_lfa1-str_suppl2.
+      wa_lifnr-street4               = wa_lfa1-str_suppl3.
+*       wa_lifnr- street5               = wa_lfa1-
+      wa_lifnr-postal_code           = wa_lfa1-post_code1.
+      wa_lifnr-CITY                  = wa_lfa1-CITY1.
+      wa_lifnr-country               = wa_lfa1-COUNTRY.
+      SELECT SINGLE BEZEI FROM T005U INTO @DATA(wa_BEZEI) WHERE land1 = @wa_lifnr-country AND BLAND = @wa_lfa1-region AND spras = @sy-langu.
+      wa_lifnr-region                = |{ wa_lfa1-region }-{ wa_BEZEI }|.
+      wa_lifnr-time_zone             = wa_lfa1-time_zone.
+      wa_lifnr-telephone             = wa_lfa1-telf2.
+      wa_lifnr-mobile_phone1         = wa_lfa1-telf1.
+      SELECT SINGLE TEL_NUMBER FROM adr2 INTO wa_lifnr-mobile_phone2 WHERE ADDRNUMBER = wa_lfa1-adrnr AND CONSNUMBER = '3'.
+      wa_lifnr-pan                   = wa_lfa1-J_1IPANNO.
+      wa_lifnr-email                 = wa_lfa1-smtp_addr.
+      wa_lifnr-address_valid_from    = wa_lfa1-erdat.
+      wa_lifnr-address_valid_to      = wa_lfa1-date_to.
+      SELECT SINGLE ADDRCOMM FROM but000 INTO @DATA(wa_but000) WHERE PARTNER = @wa_lifnr-business_partner.
+      SELECT SINGLE SMTP_ADDR FROM adr6 INTO @DATA(wa_adr6) WHERE ADDRNUMBER = @wa_but000.
+       wa_lifnr-email1                = wa_adr6.
+      SELECT SINGLE TEL_NUMBER FROM ADR2 INTO @DATA(WA_ADR2) WHERE ADDRNUMBER = @wa_but000.
+       wa_lifnr-mobile_phone          = WA_ADR2.
+*       wa_lifnr- standard_address      = wa_lfa1-
+*       wa_lifnr- billing_address       = wa_lfa1-
+*       wa_lifnr- supplier_ret_to_add   = wa_lfa1-
+      wa_lifnr-category             = wa_lfa1-taxtype.
+      wa_lifnr-name1                = wa_lfa1-text.
+      wa_lifnr-tax_number           = wa_lfa1-taxnum.
+      wa_lifnr-id                   = wa_lfa1-bkvid         .
+      wa_lifnr-c_r                  = wa_lfa1-banks         .
+      wa_lifnr-bank_key             = wa_lfa1-bankl         .
+      wa_lifnr-bank_acc             = wa_lfa1-bankn         .
+      wa_lifnr-control_key          = wa_lfa1-bkont         .
+      wa_lifnr-alisa                = wa_lfa1-alias_is_used .
+      wa_lifnr-reference_details    = wa_lfa1-bkref         .
+      wa_lifnr-account_holder       = wa_lfa1-koinh         .
+      wa_lifnr-account_name         = wa_lfa1-accname       .
+*      wa_lifnr-valid_from           = wa_lfa1-bk_valid_from .
+*      wa_lifnr-valid_to             = wa_lfa1-bk_valid_to   .
+
+      wa_lifnr-change_on            = wa_lfa1-bk_move_date  .
+    IF wa_lifnr-change_on = '        0'.
+wa_lifnr-change_on = ' '.
+    ENDIF.
+      wa_lifnr-name_finance_inst    = wa_lfa1-banka         .
+      wa_lifnr-archiving_flag       = wa_lfa1-xdele        .
+      wa_lifnr-central_block        = wa_lfa1-xblck        .
+      wa_lifnr-not_released         = wa_lfa1-not_released .
+      SELECT SINGLE bank_del_d FROM bp001 INTO @DATA(wa_end_date) WHERE partner = @wa_lifnr-business_partner.
+      wa_lifnr-end_date             = wa_end_date.
+
+      IF lifnr+0(2) = 'SU'.
+        SELECT SINGLE ktokk,nodel,loevm FROM lfa1 INTO @DATA(wa_lfa11) WHERE lifnr = @wa_lifnr-business_partner.
+        wa_lifnr-account_group           = wa_lfa11-ktokk.
+        wa_lifnr-central_del_block       = wa_lfa11-nodel.
+        wa_lifnr-central_deletion_flag   = wa_lfa11-loevm.
+
+        SELECT SINGLE * FROM lfbw INTO @DATA(wa_lfbw) WHERE lifnr = @wa_lifnr-business_partner.
+        wa_lifnr-wtax_type             = wa_lfbw-witht.
+        wa_lifnr-wtax_code             = wa_lfbw-wt_withcd.
+        wa_lifnr-subject               = wa_lfbw-wt_subjct.
+        SELECT SINGLE text40 FROM t059zt INTO wa_lifnr-name_code WHERE witht = wa_lifnr-wtax_type AND wt_withcd = wa_lifnr-wtax_code AND spras = sy-langu.
+        wa_lifnr-exemption_number      = wa_lfbw-wt_exnr.
+        wa_lifnr-exemption_rate        = wa_lfbw-wt_exrt.
+        wa_lifnr-expempt_from          = wa_lfbw-wt_exdf.
+        wa_lifnr-expempt_to            = wa_lfbw-wt_exdt.
+        wa_lifnr-exemption_reason      = wa_lfbw-wt_wtexrs.
+
+        SELECT SINGLE * FROM lfm1 INTO @DATA(wa_lfm1) WHERE lifnr = @wa_lifnr-business_partner.
+        wa_lifnr-purch_organization    = wa_lfm1-ekorg.
+        wa_lifnr-order_currency        = wa_lfm1-waers.
+        wa_lifnr-payment_terms         = wa_lfm1-zterm.
+        wa_lifnr-inco_terms            = wa_lfm1-inco1.
+        wa_lifnr-incoterms_location_1  = wa_lfm1-inco2_l.
+        wa_lifnr-grbased_inv_verif     = wa_lfm1-webre.
+        wa_lifnr-delete_flag_purch_org = wa_lfm1-loevm.
+        wa_lifnr-schema_group_supplier = wa_lfm1-kalsk.
+        wa_lifnr-sort_criterion_mat    = wa_lfm1-skrit.
+        wa_lifnr-confirmation_control  = wa_lfm1-bstae.
+        SELECT SINGLE ekotx FROM t024e INTO wa_lifnr-purch_organization_desc WHERE ekorg = wa_lifnr-purch_organization.
+        SELECT SINGLE ltext FROM tcurt INTO wa_lifnr-order_currency_desc WHERE waers = wa_lifnr-order_currency AND spras = sy-langu.
+        SELECT SINGLE vtext FROM tvzbt INTO wa_lifnr-payment_terms_desc WHERE zterm = wa_lifnr-payment_terms AND spras = sy-langu.
+        SELECT SINGLE bezei FROM tinct INTO wa_lifnr-inco_terms_desc WHERE inco1 = wa_lifnr-inco_terms AND spras = sy-langu.
+        SELECT SINGLE kalsb FROM tmkkt INTO wa_lifnr-schema_group_supplier_desc WHERE kalsk = wa_lifnr-schema_group_supplier AND spras = sy-langu.
+        SELECT SINGLE bsbez FROM t163m INTO wa_lifnr-confirmation_control_desc WHERE bstae = wa_lifnr-confirmation_control AND spras = sy-langu.
+*        SELECT SINGLE bsbez FROM t163m INTO wa_lifnr-sort_criterion_mat_desc WHERE skrit = wa_lifnr-sort_criterion_mat AND spras = sy-langu.
+
+        IF wa_lifnr-delete_flag_purch_org = 'X'.
+          wa_lifnr-delete_flag_purch_org_desc = 'YES'.
+        ELSE.
+          wa_lifnr-delete_flag_purch_org_desc = 'NO'.
+        ENDIF.
+
+        IF wa_lifnr-confirmation_control IS INITIAL.
+          wa_lifnr-sort_criterion_mat_desc = 'By VSR sequence number'.
+        ELSEIF wa_lifnr-confirmation_control = 'A'.
+          wa_lifnr-sort_criterion_mat_desc = 'By EAN'.
+        ELSEIF wa_lifnr-confirmation_control = 'B'.
+          wa_lifnr-sort_criterion_mat_desc = 'By material number'.
+        ELSEIF wa_lifnr-confirmation_control = 'C'.
+          wa_lifnr-sort_criterion_mat_desc = 'By supplier material number'.
+        ELSEIF wa_lifnr-confirmation_control = 'D'.
+          wa_lifnr-sort_criterion_mat_desc = 'By material group'.
+        ENDIF.
+
+        CONDENSE : wa_lifnr-exemption_rate.
+
+      ENDIF.
+
+      IF lifnr+0(2) = 'CU'.
+        SELECT SINGLE * FROM kna1 INTO @DATA(wa_kna11) WHERE lifnr = @wa_lifnr-business_partner.
+        wa_lifnr-account_group           = wa_kna11-ktokd.
+        wa_lifnr-central_del_block       = wa_kna11-nodel.
+        wa_lifnr-central_deletion_flag   = wa_kna11-loevm.
+        wa_lifnr-all_sales_areas         = wa_kna11-aufsd.
+        wa_lifnr-all_sales_areas_db      = wa_kna11-lifsd.
+        wa_lifnr-all_sales_areas_bb      = wa_kna11-faksd.
+        wa_lifnr-all_sales_areas_ssa     = wa_kna11-cassd.
+        wa_lifnr-company_code_desc       = wa_kna11-name1.
+
+        SELECT SINGLE * FROM knb1 INTO @DATA(wa_knb1) WHERE kunnr = @wa_lifnr-business_partner.
+        wa_lifnr-company_code            = wa_knb1-bukrs.
+        wa_lifnr-customer_no             = wa_knb1-kunnr.
+        wa_lifnr-reconciliation          = wa_knb1-akont.
+        wa_lifnr-payment_terms1          = wa_knb1-zterm.
+        wa_lifnr-payment_block           = wa_knb1-zahls.
+
+        IF wa_lifnr-company_code = '1000'.
+          wa_lifnr-company_code = 'M.N. AUTO PRODUCTS (P)LTD'.
+        ELSEIF wa_lifnr-company_code = '2000'.
+          wa_lifnr-company_code = 'ABC1'.
+        ENDIF.
+        SELECT SINGLE txt50 FROM skat INTO wa_lifnr-reconciliation_desc WHERE saknr = wa_lifnr-reconciliation.
+        SELECT SINGLE vtext FROM tvzbt INTO wa_lifnr-payment_terms_desc1 WHERE zterm = wa_lifnr-payment_terms1 AND spras = sy-langu.
+        SELECT SINGLE textl FROM t008t INTO wa_lifnr-payment_block_desc1 WHERE zahls = wa_lifnr-payment_block AND SPRAS = sy-langu.
+
+        SELECT SINGLE * FROM knvv INTO @DATA(wa_knvv) WHERE kunnr = @wa_lifnr-business_partner.
+        wa_lifnr-sales_district          = wa_knvv-bzirk.
+        wa_lifnr-customer_group          = wa_knvv-kdgrp.
+        wa_lifnr-sales_office            = wa_knvv-vkbur.
+        wa_lifnr-sales_group             = wa_knvv-vkgrp.
+        wa_lifnr-order_probability       = wa_knvv-awahr.
+        wa_lifnr-currency                = wa_knvv-waers.
+        wa_lifnr-exchange_rate_type      = wa_knvv-kurst.
+        wa_lifnr-price_group             = wa_knvv-konda.
+        wa_lifnr-PRICE_LIST              = wa_knvv-PLTYP.
+        wa_lifnr-cut_pric_procedure      = wa_knvv-kalks.
+        wa_lifnr-delivery_priority       = wa_knvv-lprio.
+        wa_lifnr-order_combination       = wa_knvv-kzazu.
+        wa_lifnr-delivery_plant          = wa_knvv-vwerk.
+        wa_lifnr-shipping_condition      = wa_knvv-vsbed.
+        wa_lifnr-incoterms1              = wa_knvv-inco1.
+        wa_lifnr-incoterms_location_1    = wa_knvv-inco2_l.
+        wa_lifnr-payment_terms2          = wa_knvv-zterm.
+        wa_lifnr-acct_assmt_grp_cust     = wa_knvv-ktgrd.
+        wa_lifnr-selected_sales_area     = wa_knvv-aufsd.
+        wa_lifnr-selected_sales_area_db  = wa_knvv-lifsd.
+        wa_lifnr-selected_sales_area_bb  = wa_knvv-faksd.
+        wa_lifnr-selected_sales_area_ssa = wa_knvv-cassd.
+
+        SELECT SINGLE bztxt FROM t171t INTO wa_lifnr-sales_district_desc WHERE bzirk = wa_lifnr-sales_district AND spras = sy-langu.
+        SELECT SINGLE ktext FROM t151t INTO wa_lifnr-customer_group_desc WHERE kdgrp = wa_lifnr-customer_group AND spras = sy-langu.
+        SELECT SINGLE bezei FROM tvgrt INTO wa_lifnr-sales_group_desc    WHERE vkgrp = wa_lifnr-sales_group." AND spras = sy-langu.
+        SELECT SINGLE ltext FROM tcurt INTO wa_lifnr-currency_desc       WHERE waers = wa_lifnr-currency AND spras = sy-langu.
+        SELECT SINGLE PTEXT FROM T189T INTO wa_lifnr-PRICE_LIST_DESC     WHERE PLTYP = wa_lifnr-PRICE_LIST AND spras = sy-langu.
+
+        wa_lifnr-sales_office_desc       = 'HO Sales Office'.
+
+        SELECT SINGLE curvw FROM tcurw INTO wa_lifnr-exchange_rate_type_desc WHERE kurst = wa_lifnr-exchange_rate_type AND spras = sy-langu.
+        SELECT SINGLE vtext FROM t188t INTO wa_lifnr-price_group_desc WHERE konda = wa_lifnr-price_group AND spras = sy-langu.
+        SELECT SINGLE curvw FROM tcurw INTO wa_lifnr-exchange_rate_type_desc WHERE kurst = wa_lifnr-exchange_rate_type AND spras = sy-langu.
+
+        wa_lifnr-cut_pric_procedure_desc = 'interstate'.
+
+        SELECT SINGLE bezei FROM tprit INTO wa_lifnr-delivery_priority_desc WHERE lprio = wa_lifnr-delivery_priority AND spras = sy-langu.
+
+        IF wa_lifnr-delivery_plant = '1100'.
+          wa_lifnr-delivery_plant_desc = 'M.N. APPL'.
+        ELSEIF wa_lifnr-delivery_plant = '1200'.
+          wa_lifnr-delivery_plant_desc = 'Bought Out'.
+        ENDIF.
+
+        SELECT SINGLE bezei FROM tinct INTO wa_lifnr-incoterms_desc WHERE inco1 = wa_lifnr-incoterms1 AND spras = sy-langu.
+        SELECT SINGLE vtext FROM tvzbt INTO wa_lifnr-payment_terms_desc2 WHERE zterm = wa_lifnr-payment_terms2 AND spras = sy-langu.
+        SELECT SINGLE vtext FROM tvktt INTO wa_lifnr-acct_assmt_grp_cust_desc WHERE ktgrd = wa_lifnr-acct_assmt_grp_cust AND spras = sy-langu.
+
+
+
+
+        SELECT * FROM knvi INTO TABLE @DATA(it_knvi) WHERE kunnr = @wa_lifnr-business_partner.
+
+        LOOP AT it_knvi INTO DATA(wa_knvi).
+
+          CONCATENATE wa_knvi-tatyp wa_lifnr-tax_category INTO DATA(wa_tatyp).
+          wa_lifnr-dep_ctry_reg = wa_knvi-aland.
+          wa_lifnr-tax_classification = wa_knvi-taxkd.
+
+        ENDLOOP.
+
+      ENDIF.
+
+      IF lifnr+0(2) = 'SU'.
+        wa_lifnr-display_bp_role = 'MN Auto Supplier'.
+      ELSEIF lifnr+0(3) = 'SAP'.
+        wa_lifnr-display_bp_role = 'MN Auto Subcontract'.
+      ELSEIF lifnr+0(2) = 'TR'.
+        wa_lifnr-display_bp_role = 'MN Auto Transporter'.
+      ELSEIF lifnr+0(2) = 'CU'.
+        wa_lifnr-display_bp_role = 'MN Auto Domestic Customer'.
+      ELSEIF lifnr+0(2) = 'CUE'.
+        wa_lifnr-display_bp_role = 'MN Auto Export Customer '.
+      ENDIF.
+
+      APPEND wa_lifnr TO it_lifnr.
+      CLEAR : wa_lifnr,wa_adr6,WA_ADR2.
+
+    ENDLOOP.
+
+
+    DATA(json_writer) = cl_sxml_string_writer=>create(
+                       type = if_sxml=>co_xt_json ).
+    CALL TRANSFORMATION id SOURCE result = it_lifnr
+                           RESULT XML json_writer.
+    DATA(json) = json_writer->get_output( ).
+
+    DATA: lo_json_data TYPE REF TO zcl_trex_json_serializer,
+          json1        TYPE string.
+
+    CREATE OBJECT lo_json_data
+      EXPORTING
+        data = it_lifnr.
+
+* serialize data
+
+    lo_json_data->serialize( ).
+
+* get serialized json data string
+
+    json1 = lo_json_data->get_data( ).
+
+    server->response->set_cdata(
+         data = json1 ).
+
+
+
+
+  ENDMETHOD.
