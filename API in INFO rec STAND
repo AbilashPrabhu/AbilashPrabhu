@@ -1,0 +1,226 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+
+    TYPES : BEGIN OF TY_STRU,
+              INFO_RECORD       TYPE EINA-INFNR,
+              SUPPLIER          TYPE EINA-LIFNR,
+              SUPPLIER_NAME     TYPE name1,
+              MATERIAL_NO       TYPE EINA-MATNR,
+              MATERIAL_DESC     TYPE EINA-MATNR,
+              MATERIAL_GRP      TYPE MARA-MATKL,
+              MATERIAL_GRP_DESC TYPE CHAR30,
+              CONVERSION_FROM   TYPE CHAR10,
+              CONVERSIONFROMUOM TYPE CHAR10,
+              CONVERSION_TO     TYPE CHAR10,
+              CONVERSIONTOUOM   TYPE CHAR10,
+              ORDER_UNIT        TYPE EINA-MEINS,
+              PURCHASE_ORG      TYPE EINE-EKORG,
+              PLANT             TYPE EINE-WERKS,
+              PLANNED_DEL_TIME  TYPE EINE-APLFZ,
+              PURCHASE_GROUP    TYPE EINE-EKGRP,
+              STANDARD_QTY      TYPE EINE-NORBM,
+              CONF_CTRL         TYPE EINE-BSTAE,
+              GR_BSD_IV         TYPE EINE-WEBRE,
+              VERSION           TYPE EINE-INCOV,
+              TAX_CODE          TYPE EINE-MWSKZ,
+              TAX_CODE_DESC     TYPE CHAR50,
+              NET_PRICE         TYPE EINE-NETPR,
+              EFFECTIVE         TYPE EINE-EFFPR,
+              INFO_TYPE         TYPE EINE-ESOKZ,
+              INFO_TYPE_DESC    TYPE CHAR50,
+              AMOUNT            TYPE KBETR_KOND,
+              UNIT              TYPE KONWA,
+              PER               TYPE KPEIN,
+              UOM               TYPE KMEIN,
+              CALCULATION_TYPE  TYPE KRECH,
+              SCALR_BASE_QTY    TYPE KZBZG,
+              VALID_FROM        TYPE char10,
+              VALID_TO          TYPE char10,
+              SUPPLIER1         TYPE LIFNR,
+              MATERIAL          TYPE MATNR,
+            END OF TY_STRU.
+
+
+    DATA : IT_TABLE TYPE TABLE OF TY_STRU,
+           WA_TABLE TYPE TY_STRU.
+
+
+*      DATA : it_head TYPE TABLE OF zapi_info_rec_head,
+*             wa_head TYPE zapi_info_rec_head.
+*
+*      DATA : it_item TYPE TABLE OF zapi_info_rec_item,
+*             wa_item TYPE zapi_info_rec_item.
+
+    DATA : GS_JSON TYPE STRING.
+
+
+    CALL METHOD ME->GET_USERDETAILS
+      EXPORTING
+        SERVER   = SERVER           " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        CATEGORY = DATA(LV_CAT)          " Component of the Version Number
+*       plant    = data(werks)            " Plant
+      .
+
+    DATA : CATEG TYPE CHAR2.
+
+    IF LV_CAT = 'subcontracting'.
+      CATEG = '3'.
+    ELSEIF LV_CAT = 'standard'.
+      CATEG = '0'.
+    ENDIF.
+
+
+
+
+*    TRANSLATE lifnr TO UPPER CASE.
+*     TRANSLATE matnr TO UPPER CASE.
+
+
+*break it4.
+
+    SELECT A~INFNR,     "info record no
+           A~LIFNR,     "supplier code
+           A~MATNR,     "material no
+           A~UMREN,     "conversion from
+           A~UMREZ,     "conversion to
+           A~MEINS,     "order unit
+           A~LMEIN,     "order unit1
+           B~EKORG,     "pirchase org
+           B~WERKS,     "plant
+           B~APLFZ,     "planned del time
+           B~EKGRP,     "purchase group
+           B~NORBM,     "standard qty
+           B~BSTAE,     "conf.ctrl
+           B~WEBRE,     "gr-bsd iv
+*           b~incov,     "version
+           B~VERID,     "version
+           B~MWSKZ,     "tax code
+           B~NETPR,     "nat price
+           B~EFFPR,     "effective price
+           B~ESOKZ     "info type
+      FROM EINA AS A
+      LEFT OUTER JOIN EINE AS B
+      ON ( A~INFNR = B~INFNR )
+      INTO TABLE @DATA(IT_EINA)
+      WHERE B~ESOKZ = @CATEG." and b~werks = @werks.  "a~lifnr = @lifnr ."a~matnr = 'FCH010515' ."AND a~
+
+
+    LOOP AT IT_EINA INTO DATA(WA_EINA).
+
+      SELECT * FROM A017 INTO TABLE @DATA(IT_A017) WHERE LIFNR = @WA_EINA-LIFNR AND MATNR = @WA_EINA-MATNR AND EKORG = @WA_EINA-EKORG AND ESOKZ = @WA_EINA-ESOKZ   .
+      SELECT * FROM KONP INTO TABLE @DATA(IT_KONP) FOR ALL ENTRIES IN @IT_A017 WHERE KNUMH = @IT_A017-KNUMH.
+
+      LOOP AT IT_A017 INTO DATA(WA_A017) WHERE LIFNR = WA_EINA-LIFNR AND  MATNR = WA_EINA-MATNR AND EKORG = WA_EINA-EKORG.
+
+        WA_TABLE-INFO_RECORD   = WA_EINA-INFNR.
+        WA_TABLE-SUPPLIER      = WA_EINA-LIFNR.
+        SELECT SINGLE NAME1 FROM LFA1 INTO WA_TABLE-SUPPLIER_NAME WHERE LIFNR = WA_TABLE-SUPPLIER.
+        WA_TABLE-MATERIAL_NO      = WA_EINA-MATNR.
+        SELECT SINGLE MAKTX FROM MAKT INTO WA_TABLE-MATERIAL_DESC WHERE MATNR = WA_TABLE-MATERIAL_NO.
+
+        SELECT SINGLE MATKL FROM MARA INTO WA_TABLE-MATERIAL_GRP WHERE MATNR = WA_TABLE-MATERIAL_NO.
+        SELECT SINGLE WGBEZ FROM T023T INTO WA_TABLE-MATERIAL_GRP_DESC WHERE MATKL = WA_TABLE-MATERIAL_GRP.
+
+        WA_TABLE-ORDER_UNIT          = WA_EINA-MEINS.
+        WA_TABLE-CONVERSION_FROM     = WA_EINA-UMREN .
+        WA_TABLE-CONVERSIONFROMUOM   = WA_EINA-MEINS .
+        WA_TABLE-CONVERSION_TO       = WA_EINA-UMREZ.
+        WA_TABLE-CONVERSIONTOUOM     = WA_EINA-LMEIN .
+        WA_TABLE-PURCHASE_ORG        = WA_EINA-EKORG.
+        WA_TABLE-PURCHASE_GROUP      = WA_EINA-EKGRP.
+        WA_TABLE-PLANT               = WA_EINA-WERKS.
+        WA_TABLE-PLANNED_DEL_TIME    = WA_EINA-APLFZ.
+        WA_TABLE-STANDARD_QTY        = WA_EINA-NORBM.
+        WA_TABLE-CONF_CTRL           = WA_EINA-BSTAE.
+        WA_TABLE-GR_BSD_IV           = WA_EINA-WEBRE.
+        WA_TABLE-VERSION             = WA_EINA-VERID.
+        WA_TABLE-TAX_CODE            = WA_EINA-MWSKZ.
+        SELECT SINGLE TEXT1 FROM T007S INTO WA_TABLE-TAX_CODE_DESC WHERE MWSKZ = WA_TABLE-TAX_CODE AND KALSM = 'ZMNTAX' AND SPRAS = SY-LANGU.
+        IF WA_EINA-NETPR IS NOT INITIAL.
+          WA_TABLE-NET_PRICE         = WA_EINA-NETPR / 100.
+        ENDIF.
+        IF WA_EINA-EFFPR IS NOT INITIAL.
+          WA_TABLE-EFFECTIVE         = WA_EINA-EFFPR / 100.
+        ENDIF.
+
+        WA_TABLE-SUPPLIER1                        = WA_A017-LIFNR.
+        WA_TABLE-MATERIAL                        = WA_A017-MATNR.
+        WA_TABLE-INFO_TYPE                       = WA_A017-ESOKZ.
+
+        IF WA_TABLE-INFO_TYPE = '0'.
+          WA_TABLE-INFO_TYPE_DESC                = 'Standard'.
+        ELSEIF WA_TABLE-INFO_TYPE = '1'.
+          WA_TABLE-INFO_TYPE_DESC                = 'Chargeable'.
+        ELSEIF WA_TABLE-INFO_TYPE = '2'.
+          WA_TABLE-INFO_TYPE_DESC                = 'Consignment'.
+        ELSEIF WA_TABLE-INFO_TYPE = '3'.
+          WA_TABLE-INFO_TYPE_DESC                = 'Subcontracting'.
+        ELSEIF WA_TABLE-INFO_TYPE = 'p'.
+          WA_TABLE-INFO_TYPE_DESC                = 'Pipeline'.
+        ENDIF.
+
+        READ TABLE IT_KONP INTO DATA(WA_KONP) WITH KEY KNUMH = WA_A017-KNUMH.
+        IF WA_KONP-KBETR IS NOT INITIAL.
+          WA_TABLE-AMOUNT                          = WA_KONP-KBETR / 100.
+        ENDIF.
+        WA_TABLE-UNIT                            = WA_KONP-KONWA.
+        WA_TABLE-PER                             = WA_KONP-KPEIN.
+        WA_TABLE-UOM                             = WA_KONP-KMEIN.
+        WA_TABLE-CALCULATION_TYPE                = WA_KONP-KRECH.
+        WA_TABLE-SCALR_BASE_QTY                  = WA_KONP-KZBZG.
+        WA_TABLE-VALID_FROM                      = WA_A017-DATAB.
+        WA_TABLE-VALID_TO                        = WA_A017-DATBI.
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            INPUT  = WA_TABLE-MATERIAL_NO
+          IMPORTING
+            OUTPUT = WA_TABLE-MATERIAL_NO.
+
+
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            INPUT  = WA_TABLE-MATERIAL
+          IMPORTING
+            OUTPUT = WA_TABLE-MATERIAL.
+
+
+
+        APPEND WA_TABLE TO IT_TABLE.
+        CLEAR : WA_TABLE.
+
+
+
+      ENDLOOP.
+*       clear:wa_a017.
+
+*        wa_head-component[] = it_item[].
+
+*       APPEND wa_head to it_head.
+      CLEAR : IT_A017.
+
+    ENDLOOP.
+
+
+
+    GS_JSON = /UI2/CL_JSON=>SERIALIZE(
+              DATA             = IT_TABLE
+*              compress         = abap_true
+*              name             =
+              PRETTY_NAME      = /UI2/CL_JSON=>PRETTY_MODE-CAMEL_CASE
+          ) .
+
+    SERVER->RESPONSE->SET_CDATA(
+      EXPORTING
+        DATA   =  GS_JSON   " Character data
+*              offset = 0    " Offset into character data
+*              length = -1    " Length of character data
+    ).
+
+
+
+
+
+  ENDMETHOD.
