@@ -1,0 +1,622 @@
+
+TABLES : LFA1 , adrc .
+
+
+TYPES : BEGIN OF ty_lfa1,
+          LIFNR   TYPE lfa1-lifnr,
+          LAND1 TYPE LFA1-LAND1,
+*          BLAND TYPE LFA1-BLAND,
+          adrnr TYPE lfa1-adrnr,
+          REGIO TYPE LFA1-REGIO,
+          stcd3 TYPE lfa1-stcd3,
+          erdat TYPE lfa1-erdat,
+          aedat TYPE lfa1-aedat,
+          profs TYPE lfa1-profs,
+        END OF ty_lfa1.
+
+
+
+
+TYPES : BEGIN OF ty_adrc,
+          addrnumber TYPE adrc-addrnumber,
+           Name1 TYPE adrc-Name1,
+          city1      TYPE adrc-city1,
+          sort1      TYPE adrc-sort1,
+          street     TYPE  adrc-street,
+          house_num1 TYPE adrc-house_num1,
+          post_code1 TYPE adrc-post_code1,
+          country    TYPE adrc-country,
+          region     TYPE adrc-region,
+          tel_number TYPE adrc-tel_number,
+          str_suppl1 TYPE adrc-str_suppl1,
+          str_suppl2 TYPE adrc-str_suppl2,
+          str_suppl3 TYPE adrc-str_suppl3,
+          LOCATION TYPE adrc-LOCATION,
+        END OF ty_adrc.
+
+
+
+TYPES : BEGIN OF ty_lfm1,
+         Lifnr     type lfm1-Lifnr,
+         EKORG     type  lfm1-EKORG,
+         EKGRP     type  lfm1-EKGRP,
+        ZTERM     type   lfm1-ZTERM,
+        END OF ty_lfm1.
+
+
+TYPES : BEGIN OF ty_final,
+           LIFNR   TYPE lfa1-lifnr,
+          adrnr TYPE lfa1-adrnr,
+          stcd3 TYPE lfa1-stcd3,
+          erdat TYPE lfa1-erdat,
+          aedat TYPE lfa1-aedat,
+          LAND1 TYPE lfa1-LAND1,
+
+*          BLAND TYPE lfa1-BLAND,
+          addrnumber TYPE adrc-addrnumber,
+          name1 TYPE adrc-name1,
+          city1      TYPE adrc-city1,
+          sort1      TYPE adrc-sort1,
+          street     TYPE  adrc-street,
+          house_num1 TYPE adrc-house_num1,
+          post_code1 TYPE adrc-post_code1,
+          country    TYPE adrc-country,
+          region     TYPE adrc-region,
+          tel_number TYPE adrc-tel_number,
+          str_suppl1 TYPE adrc-str_suppl1,
+          str_suppl2 TYPE adrc-str_suppl2,
+          str_suppl3 TYPE adrc-str_suppl3,
+          LOCATION   TYPE adrc-LOCATION,
+           Lifnr1     type lfm1-Lifnr,
+          EKORG     type  lfm1-EKORG,
+          EKGRP     type  lfm1-EKGRP,
+          ZTERM     type   lfm1-ZTERM,
+          BLAND     type  T005U-BLAND,
+          BEZEI     TYPE T005U-bezei,
+          SMTP_ADDR TYPE ADR6-SMTP_ADDR,
+          VTEXT     TYPE  TVZBT-VTEXT,
+          profs     TYPE lfa1-profs,
+          status    TYPE char10,
+
+        END OF ty_final.
+
+
+
+
+
+DATA : it_lfa1 TYPE STANDARD TABLE OF ty_lfa1,
+       wa_lfa1 TYPE ty_lfa1.
+
+
+DATA : it_adrc TYPE STANDARD TABLE OF ty_adrc,
+       wa_adrc TYPE ty_adrc.
+
+
+DATA : it_lfm1 TYPE STANDARD TABLE OF ty_lfm1,
+       wa_lfm1 TYPE ty_lfm1.
+
+
+DATA : it_final TYPE STANDARD TABLE OF ty_final,
+       wa_final TYPE ty_final.
+
+DATA : it_fieldcat TYPE slis_t_fieldcat_alv,
+       wa_fieldcat TYPE slis_fieldcat_alv,
+       lv          TYPE disvariant,
+       wa_layout   TYPE slis_layout_alv.
+
+DATA: i_sort  TYPE slis_t_sortinfo_alv,
+      wa_sort LIKE LINE OF i_sort.
+
+
+DATA : i_events  TYPE slis_t_event .
+DATA : wa_events LIKE LINE OF i_events.
+
+
+
+
+SELECTION-SCREEN:BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+
+  SELECT-OPTIONS : s_lifnr FOR lfa1-lifnr.
+
+
+SELECTION-SCREEN END OF BLOCK b1.
+
+
+SELECTION-SCREEN:BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-002.
+  parameters: r1 radiobutton group rad1 default 'X' user-command flag,
+              r2 radiobutton group rad1,
+              r3 radiobutton group rad1.
+SELECTION-SCREEN END OF BLOCK b2.
+
+
+START-OF-SELECTION.
+
+  PERFORM get_data.
+  PERFORM field_cat.
+  PERFORM display_data.
+
+
+
+FORM get_data.
+IF R1 IS not INITIAL.
+
+  SELECT
+        lifnr
+        LAND1
+        adrnr
+        REGIO
+        stcd3
+        erdat
+        aedat
+        profs
+     FROM lfa1
+    INTO TABLE it_lfa1 WHERE lifnr IN s_lifnr AND KTOKK in ( 'ZDOM' , 'ZIMP' ).
+
+
+
+  SELECT
+        addrnumber
+        name1
+         city1
+         sort1
+         street
+         house_num1
+         post_code1
+         country
+         region
+         tel_number
+         str_suppl1
+         str_suppl2
+         str_suppl3
+         LOCATION
+
+     FROM adrc
+     INTO  TABLE it_adrc
+     FOR ALL ENTRIES IN it_lfa1
+     WHERE addrnumber = it_lfa1-adrnr.
+
+
+    select
+          lifnr
+           EKORG
+         EKGRP
+         ZTERM
+           from lfm1 into table it_lfm1
+          FOR ALL ENTRIES IN it_lfa1
+          where lifnr = it_lfa1-lifnr.
+
+   SELECT * FROM T005U INTO TABLE @DATA(IT_T5) FOR ALL ENTRIES IN @it_lfa1 WHERE LAND1 = @it_lfa1-LAND1 AND BLAND = @it_lfa1-REGIO AND SPRAS EQ 'E'.
+
+  LOOP AT it_lfa1 INTO wa_lfa1.
+    wa_final-lifnr  = wa_lfa1-lifnr.
+    wa_final-adrnr  = wa_lfa1-adrnr.
+    wa_final-stcd3  = wa_lfa1-stcd3.
+    wa_final-erdat  = wa_lfa1-erdat.
+    wa_final-aedat  = wa_lfa1-aedat.
+    wa_final-LAND1  = wa_lfa1-Land1.
+
+*    wa_final-REGIO  = wa_lfa1-REGIO.
+*    wa_final-BLAND  = wa_lfa1-BLAND.
+     wa_final-PROFS  = wa_lfa1-PROFS.
+
+
+
+
+    READ TABLE  it_adrc  INTO wa_adrc  WITH  KEY addrnumber = wa_final-adrnr.
+      wa_final-addrnumber  = wa_adrc-addrnumber.
+      wa_final-name1  = wa_adrc-name1.
+      wa_final-city1       = wa_adrc-city1.
+      wa_final-sort1       = wa_adrc-sort1.
+      wa_final-street      = wa_adrc-street.
+      wa_final-house_num1  = wa_adrc-house_num1.
+      wa_final-post_code1  = wa_adrc-post_code1.
+      wa_final-country     = wa_adrc-country.
+      wa_final-region      = wa_adrc-region.
+      wa_final-tel_number  = wa_adrc-tel_number.
+      wa_final-str_suppl1  = wa_adrc-str_suppl1.
+      wa_final-str_suppl2  = wa_adrc-str_suppl2.
+      wa_final-str_suppl3  = wa_adrc-str_suppl3.
+      wa_final-LOCATION  = wa_adrc-LOCATION.
+
+
+      READ TABLE  it_lfm1 into wa_lfm1 WITH  KEY lifnr = wa_lfa1-lifnr.
+      wa_final-Ekorg  = wa_lfm1-ekorg.
+      wa_final-Ekgrp  = wa_lfm1-Ekgrp.
+      wa_final-Zterm  = wa_lfm1-Zterm.
+
+      READ TABLE IT_T5 into DATA(wa_T5) with key LAND1 = wa_lfa1-land1 BLAND = WA_LFA1-REGIO.
+      wa_final-Bland = wa_t5-Bland.
+      wa_final-BEZEI = wa_t5-BEZEI.
+
+SELECT SINGLE SMTP_ADDR FROM ADR6 INTO wa_final-SMTP_ADDR WHERE ADDRNUMBER = wa_final-ADRNR.
+SELECT SINGLE VTEXT FROM TVZBT INTO wa_final-VTEXT WHERE ZTERM = wa_final-Zterm.
+
+
+ SELECT SINGLE XDELE FROM BUT000 INTO @DATA(XDELE) WHERE PARTNER = @wa_lfa1-lifnr.
+   IF XDELE = 'X'.
+     wa_final-STATUS = 'Inactive'.
+   ELSE.
+     wa_final-STATUS = 'Active'.
+   ENDIF.
+
+  APPEND : wa_final TO it_final.
+  CLEAR : WA_FINAL.
+*
+  ENDLOOP.
+  ENDIF.
+
+  IF R2 IS NOT INITIAL.
+
+  SELECT
+        lifnr,
+        LAND1,
+        adrnr,
+        REGIO,
+        stcd3,
+        erdat,
+        aedat,
+        profs
+     FROM lfa1
+    INTO TABLE  @it_lfa1 WHERE lifnr IN @s_lifnr AND KTOKK IN ( 'ZSUB' , 'ZSER' ).
+
+
+   SELECT * FROM T005U INTO TABLE @DATA(IT_T6) FOR ALL ENTRIES IN @it_lfa1 WHERE LAND1 = @it_lfa1-LAND1 AND BLAND = @it_lfa1-REGIO AND SPRAS EQ 'E'.
+
+
+  SELECT
+        addrnumber
+        name1
+         city1
+         sort1
+         street
+         house_num1
+         post_code1
+         country
+         region
+         tel_number
+         str_suppl1
+         str_suppl2
+         str_suppl3
+         LOCATION
+     FROM adrc
+     INTO  TABLE it_adrc
+     FOR ALL ENTRIES IN it_lfa1
+     WHERE addrnumber = it_lfa1-adrnr.
+
+
+    select
+          lifnr
+           EKORG
+         EKGRP
+        Zterm
+           from lfm1 into table it_lfm1
+          FOR ALL ENTRIES IN it_lfa1
+          where lifnr = it_lfa1-lifnr.
+
+  LOOP AT it_lfa1 INTO wa_lfa1.
+    wa_final-lifnr  = wa_lfa1-lifnr.
+    wa_final-adrnr  = wa_lfa1-adrnr.
+    wa_final-stcd3  = wa_lfa1-stcd3.
+    wa_final-erdat  = wa_lfa1-erdat.
+    wa_final-aedat  = wa_lfa1-aedat.
+    wa_final-land1  = wa_lfa1-land1.
+    wa_final-PROFS  = wa_lfa1-PROFS.
+
+
+    READ TABLE  it_adrc  INTO wa_adrc  WITH  KEY addrnumber = wa_final-adrnr.
+      wa_final-addrnumber  = wa_adrc-addrnumber.
+      wa_final-name1  = wa_adrc-name1.
+      wa_final-city1       = wa_adrc-city1.
+      wa_final-sort1       = wa_adrc-sort1.
+      wa_final-street      = wa_adrc-street.
+      wa_final-house_num1  = wa_adrc-house_num1.
+      wa_final-post_code1  = wa_adrc-post_code1.
+      wa_final-country     = wa_adrc-country.
+      wa_final-region      = wa_adrc-region.
+      wa_final-tel_number  = wa_adrc-tel_number.
+      wa_final-str_suppl1  = wa_adrc-str_suppl1.
+      wa_final-str_suppl2  = wa_adrc-str_suppl2.
+      wa_final-str_suppl3  = wa_adrc-str_suppl3.
+      wa_final-LOCATION  = wa_adrc-LOCATION.
+
+
+      READ TABLE  it_lfm1 into wa_lfm1 WITH  KEY lifnr = wa_lfa1-lifnr.
+      wa_final-Ekorg  = wa_lfm1-ekorg.
+      wa_final-Ekgrp  = wa_lfm1-Ekgrp.
+      wa_final-Zterm  = wa_lfm1-Zterm.
+
+
+      READ TABLE IT_T6 into DATA(wa_T6) with key LAND1 = wa_lfa1-land1 BLAND = WA_LFA1-REGIO.
+      wa_final-Bland = wa_t6-Bland.
+      wa_final-BEZEI = wa_t6-BEZEI.
+
+SELECT SINGLE SMTP_ADDR FROM ADR6 INTO wa_final-SMTP_ADDR WHERE ADDRNUMBER = wa_final-ADRNR.
+  SELECT SINGLE VTEXT FROM TVZBT INTO wa_final-VTEXT WHERE ZTERM = wa_final-Zterm.
+
+ SELECT SINGLE XDELE FROM BUT000 INTO @XDELE WHERE PARTNER = @wa_lfa1-lifnr.
+   IF XDELE = 'X'.
+     wa_final-STATUS = 'Inactive'.
+   ELSE.
+     wa_final-STATUS = 'Active'.
+   ENDIF.
+
+  APPEND : wa_final TO it_final.
+  CLEAR : WA_FINAL.
+*
+  ENDLOOP.
+  ENDIF.
+
+
+
+
+  IF R3 IS NOT INITIAL.
+
+  SELECT
+      lifnr
+        LAND1
+        adrnr
+        REGIO
+        stcd3
+        erdat
+        aedat
+        profs
+     FROM lfa1
+    INTO TABLE it_lfa1 WHERE lifnr IN s_lifnr AND KTOKK EQ 'ZTRA'.
+
+
+   SELECT * FROM T005U INTO TABLE @DATA(IT_T7) FOR ALL ENTRIES IN @it_lfa1 WHERE LAND1 = @it_lfa1-LAND1 AND BLAND = @it_lfa1-REGIO AND SPRAS EQ 'E'.
+
+
+  SELECT
+        addrnumber
+         name1
+         city1
+         sort1
+         street
+         house_num1
+         post_code1
+         country
+         region
+         tel_number
+         str_suppl1
+         str_suppl2
+         str_suppl3
+         LOCATION
+     FROM adrc
+     INTO  TABLE it_adrc
+     FOR ALL ENTRIES IN it_lfa1
+     WHERE addrnumber = it_lfa1-adrnr.
+
+
+    select
+          lifnr
+           EKORG
+         EKGRP
+         Zterm
+           from lfm1 into table it_lfm1
+          FOR ALL ENTRIES IN it_lfa1
+          where lifnr = it_lfa1-lifnr.
+
+  LOOP AT it_lfa1 INTO wa_lfa1.
+    wa_final-lifnr  = wa_lfa1-lifnr.
+    wa_final-adrnr  = wa_lfa1-adrnr.
+    wa_final-stcd3  = wa_lfa1-stcd3.
+    wa_final-erdat  = wa_lfa1-erdat.
+    wa_final-aedat  = wa_lfa1-aedat.
+    wa_final-LAnd1  = wa_lfa1-Land1.
+    wa_final-PROFS  = wa_lfa1-PROFS.
+
+
+
+
+    READ TABLE  it_adrc  INTO wa_adrc  WITH  KEY addrnumber = wa_final-adrnr.
+      wa_final-addrnumber  = wa_adrc-addrnumber.
+      wa_final-name1  = wa_adrc-name1.
+      wa_final-city1       = wa_adrc-city1.
+      wa_final-sort1       = wa_adrc-sort1.
+      wa_final-street      = wa_adrc-street.
+      wa_final-house_num1  = wa_adrc-house_num1.
+      wa_final-post_code1  = wa_adrc-post_code1.
+      wa_final-country     = wa_adrc-country.
+      wa_final-region      = wa_adrc-region.
+      wa_final-tel_number  = wa_adrc-tel_number.
+      wa_final-str_suppl1  = wa_adrc-str_suppl1.
+      wa_final-str_suppl2  = wa_adrc-str_suppl2.
+      wa_final-str_suppl3  = wa_adrc-str_suppl3.
+      wa_final-LOCATION  = wa_adrc-LOCATION.
+
+
+      READ TABLE  it_lfm1 into wa_lfm1 WITH  KEY lifnr = wa_lfa1-lifnr.
+      wa_final-Ekorg  = wa_lfm1-ekorg.
+      wa_final-Ekgrp  = wa_lfm1-Ekgrp.
+      wa_final-Zterm  = wa_lfm1-Zterm.
+
+      READ TABLE IT_T7 into DATA(wa_T7) with key LAND1 = wa_lfa1-land1 BLAND = WA_LFA1-REGIO.
+      wa_final-Bland = wa_t7-Bland.
+      wa_final-BEZEI = wa_t7-BEZEI.
+SELECT SINGLE SMTP_ADDR FROM ADR6 INTO wa_final-SMTP_ADDR WHERE ADDRNUMBER = wa_final-ADRNR.
+  SELECT SINGLE VTEXT FROM TVZBT INTO wa_final-VTEXT WHERE ZTERM = wa_final-Zterm.
+
+
+ SELECT SINGLE XDELE FROM BUT000 INTO @XDELE WHERE PARTNER = @wa_lfa1-lifnr.
+   IF XDELE = 'X'.
+     wa_final-STATUS = 'Inactive'.
+   ELSE.
+     wa_final-STATUS = 'Active'.
+   ENDIF.
+
+
+  APPEND : wa_final TO it_final.
+  CLEAR : WA_FINAL.
+*
+
+  ENDLOOP.
+  ENDIF.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*  ENDLOOP.
+*  ENDLOOP.
+ENDFORM.
+
+
+
+
+
+
+FORM field_cat.
+
+  PERFORM genfcat USING 'SUPPLIER'                     'LIFNR'           '1' '' ''.
+  PERFORM genfcat USING 'NAME1'                       'NAME1'            '1' '' ''.
+  PERFORM genfcat USING 'CITY'                         'CITY1'           '1' '' ''.
+  PERFORM genfcat USING 'SEARCH TERM'                  'SORT1'           '1' '' ''.
+  PERFORM genfcat USING 'STREET'                      'STREET'           '1' '' ''.
+  PERFORM genfcat USING 'HOUSE NUMBER'                 'HOUSE_NUM1'      '1' '' ''.
+  PERFORM genfcat USING 'POSTAL CODE'                  'POST_CODE1'      '1' '' ''.
+  PERFORM genfcat USING 'COUNTRY'                      'COUNTRY'         '1' '' ''.
+  PERFORM genfcat USING 'REGION'                      'BLAND'           '1' '' ''.
+  PERFORM genfcat USING 'REGION DESC'                'BEZEI'           '1' '' ''.
+  PERFORM genfcat USING 'TELEPHONE'                  'TEL_NUMBER'        '1' '' ''.
+  PERFORM genfcat USING 'GST'                          'STCD3'           '1' '' ''.
+  PERFORM genfcat USING 'CREATED DATE'                 'ERDAT'           '1' '' ''.
+  PERFORM genfcat USING 'CHANGED DATE'                 'AEDAT'           '1' '' ''.
+  PERFORM genfcat USING 'PURCHASE ORG'               'EKORG'           '1' '' ''.
+  PERFORM genfcat USING 'PURCHASE GROUP'                 'EKGRP'           '1' '' ''.
+  PERFORM genfcat USING 'STREET2'                   'STR_SUPPL1'           '1' '' ''.
+  PERFORM genfcat USING 'STREET3'                   'STR_SUPPL2'           '1' '' ''.
+  PERFORM genfcat USING 'STREET4'                  'STR_SUPPL3'           '1' '' ''.
+  PERFORM genfcat USING 'STREET5'                  'LOCATION'           '1' '' ''.
+  PERFORM genfcat USING 'STATUS'                   'STATUS'           '1' '' ''.
+*  PERFORM genfcat USING 'PURCHASE GROUP'                 'EKGRP'           '1' '' ''.
+*  PERFORM genfcat USING 'PURCHASE GROUP'                 'EKGRP'           '1' '' ''.
+  PERFORM genfcat USING 'PAYMENT TERMS'                 'ZTERM'           '1' '' ''.
+  PERFORM genfcat USING 'PAYMENT DESC'                 'VTEXT'           '1' '' ''.
+  PERFORM genfcat USING 'Email id'                  'SMTP_ADDR'           '1' '' ''.
+  PERFORM genfcat USING 'Cordinators'                  'PROFS'           '1' '' ''.
+
+
+
+
+ENDFORM.
+FORM genfcat  USING    VALUE(p_0122)
+  VALUE(p_0123)
+  VALUE(p_0124)
+  VALUE(p_0125)
+  VALUE(p_0126).
+  wa_fieldcat-col_pos    = p_0124.
+  wa_fieldcat-fieldname  = p_0123.
+  wa_fieldcat-seltext_l  = p_0122.
+  wa_fieldcat-lowercase  = 'X'.
+  wa_fieldcat-do_sum  = p_0125.
+  wa_fieldcat-no_zero  = p_0126.
+
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+ENDFORM.
+
+FORM display_data.
+  wa_layout-colwidth_optimize = 'X'.
+*  DATA: lv_repid TYPE sy-repid.
+*  wa_layout-no_colhead = 'X'.
+
+  wa_layout-info_fieldname = 'ROW_COLOR'.
+  wa_layout-colwidth_optimize = 'X'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK  = ' '
+*     I_BYPASSING_BUFFER = ' '
+*     I_BUFFER_ACTIVE    = ' '
+      i_callback_program = sy-repid
+*     I_CALLBACK_PF_STATUS_SET    = ' '
+*     I_CALLBACK_USER_COMMAND     = ' '
+*     i_callback_top_of_page = 'TOP-OF-PAGE'
+*     i_callback_html_top_of_page = 'TOP-OF-PAGE'
+*     I_CALLBACK_HTML_END_OF_LIST = ' '
+*     I_STRUCTURE_NAME   =
+*     I_BACKGROUND_ID    = ' '
+*     I_GRID_TIT  LE                      = '               Rupees in Lakh'
+*     I_GRID_SETTINGS    =
+      is_layout          = wa_layout
+      it_fieldcat        = it_fieldcat
+*     IT_EXCLUDING       =
+*     IT_SPECIAL_GROUPS  =
+      it_sort            = i_sort
+*     IT_FILTER          =
+*     IS_SEL_HIDE        =
+*     I_DEFAULT          = 'X'
+      i_save             = 'A'
+      is_variant         = lv
+*     IT_EVENTS          = I_EVENTS
+*     IT_EVENT_EXIT      =
+*     IS_PRINT           =
+*     IS_REPREP_ID       =
+*     I_SCREEN_START_COLUMN  = 0
+*     I_SCREEN_START_LINE    = 0
+*     I_SCREEN_END_COLUMN    = 0
+*     I_SCREEN_END_LINE  = 0
+*     I_HTML_HEIGHT_TOP  = 0
+*     I_HTML_HEIGHT_END  = 0
+*     IT_ALV_GRAPHICS    =
+*     IT_HYPERLINK       =
+*     IT_ADD_FIELDCAT    =
+*     IT_EXCEPT_QINFO    =
+*     IR_SALV_FULLSCREEN_ADAPTER  =
+* IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER     =
+*     ES_EXIT_CAUSED_BY_USER =
+    TABLES
+      t_outtab           = it_final
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+ENDFORM.
+
+*FORM top-of-page.
+*
+*  DATA : it_listheader TYPE slis_t_listheader,
+*         wa_listheader TYPE slis_listheader.
+*
+*  wa_listheader-typ   = 'H'.
+*  wa_listheader-info  = 'Sales Invoice Pick Details'.
+*  APPEND wa_listheader TO  it_listheader.
+*  CLEAR :  wa_listheader.
+*
+*  APPEND wa_listheader TO it_listheader.
+*  CLEAR wa_listheader.
+*
+*  wa_listheader-typ  = 'S'.
+*  CONCATENATE 'DATE : ' sy-datum+6(2) '.' sy-datum+4(2) '.' sy-datum(4)' ' ' ' INTO wa_listheader-info SEPARATED BY space.
+*
+*  APPEND wa_listheader TO it_listheader.
+*  CLEAR: wa_listheader.
+*
+*
+*  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+*    EXPORTING
+*      it_list_commentary = it_listheader.
+*ENDFORM.
