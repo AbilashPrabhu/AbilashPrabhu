@@ -1,0 +1,105 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+
+    CALL METHOD ME->GET_USERDETAILS
+      EXPORTING
+        SERVER   = SERVER         " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        FROMDATE = DATA(F_DATE)          " ABAP system field: Current date of application server
+        TODATE   = DATA(T_DATE).          " ABAP system field: Current date of application server
+
+    DATA : S_DATE TYPE RANGE OF SY-DATUM.
+
+    APPEND VALUE #( SIGN = 'I'  OPTION = 'BT'  LOW = F_DATE  HIGH = T_DATE ) TO S_DATE.
+
+    DATA : GS_JSON TYPE STRING.
+
+
+
+    SELECT A~REFNO           AS REFNUMBER,
+           A~BLDAT           AS DOCDATE,
+           A~SDATE           AS CURRENTDATE,
+           A~SUSER           AS USERNAME,
+           B~SEL             AS SELECETION,
+           B~ITEM            AS SNO,
+           B~DEL_NUM         AS DELIVERY,
+           B~DEL_ITM         AS ITEM,
+           B~KUNNR           AS SOLDTO,
+           B~NAME1           AS CUSTOMERDESCRIPTION,
+           C~BSTKD_ANA       AS CustomerPONO,
+           C~KDMAT           AS CUSTOMERMATNO,
+           B~VBELN           AS SALESDOCUMENT,
+           B~MATNR           AS MATERIAL,
+           B~ARKTX           AS MATERIALDESC,
+           B~VRKME           AS SUOM,
+           CAST( B~KWMENG       AS CHAR )   AS ORDERQTY,
+           CAST( B~OPEN_QTY     AS CHAR )   AS OPENQTY,
+           CAST( B~PLAN_QTY     AS CHAR )   AS PLANTQTY,
+           CAST( B~LFIMG        AS CHAR )   AS DELIVERYQTY,
+           CAST( B~BAL_QTY      AS CHAR )   AS STOCK,
+           CAST( B~PRI_PACK     AS CHAR )   AS PRIMARYPACKING,
+           CAST( B~PRI_PACK_QTY AS CHAR )   AS PRIMARYQTY,
+           CAST( B~PRI_BAL      AS CHAR )   AS PRIMARBAL,
+           CAST( B~SEC_PACK     AS CHAR )   AS SECPACK,
+           CAST( B~SEC_PACK_QTY AS CHAR )   AS SECPACKQTY,
+           CAST( B~SEC_BAL      AS CHAR )   AS SECBAL,
+           CAST( B~LOS_PACK     AS CHAR )   AS MASTERPACK
+         FROM ZDELIVERY_HEAD AS A
+         LEFT OUTER JOIN ZDELIVERY_ITEM AS B
+         ON ( A~REFNO = B~REFNO )
+         LEFT OUTER JOIN VBAP AS C
+         ON ( B~VBELN = C~VBELN AND B~POSNR = C~POSNR )
+         INTO TABLE @DATA(IT_HEAD)
+         WHERE A~BLDAT IN @S_DATE.
+
+
+    LOOP AT IT_HEAD ASSIGNING FIELD-SYMBOL(<WA_HEAD>).
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_HEAD>-DELIVERY
+        IMPORTING
+          OUTPUT = <WA_HEAD>-DELIVERY.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_HEAD>-SALESDOCUMENT
+        IMPORTING
+          OUTPUT = <WA_HEAD>-SALESDOCUMENT.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_HEAD>-MATERIAL
+        IMPORTING
+          OUTPUT = <WA_HEAD>-MATERIAL.
+
+
+    ENDLOOP.
+
+
+
+
+
+
+
+    GS_JSON = /UI2/CL_JSON=>SERIALIZE(
+              DATA             = IT_HEAD
+*              compress         = abap_true
+*              name             =
+              PRETTY_NAME      = /UI2/CL_JSON=>PRETTY_MODE-CAMEL_CASE
+          ) .
+
+    SERVER->RESPONSE->SET_CDATA(
+      EXPORTING
+        DATA   =  GS_JSON   " Character data
+*              offset = 0    " Offset into character data
+*              length = -1    " Length of character data
+    ).
+
+
+
+
+
+
+
+  ENDMETHOD.
