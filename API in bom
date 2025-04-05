@@ -1,0 +1,541 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+
+
+    TYPES : BEGIN OF IY_STC,
+*              FG_MATERIAL           TYPE MATNR,
+*              OLD_MATERIAL          TYPE BISMT,
+*              FG_DESCRIPTION        TYPE MAKTX,
+              COMPONENT             TYPE MATNR,
+              COMPONENT_DESCRIPTION TYPE MAKTX,
+              LAST_PUR_PRICE        TYPE CHAR10,
+              SUPPLIER              TYPE lifnr,
+              SUPPLIERNAME          TYPE NAME1,
+
+            END OF IY_STC .
+
+
+    DATA : IT_BOM TYPE TABLE OF IY_STC,
+           WA_BOM TYPE IY_STC.
+
+
+
+*TABLES:mast,stpo,mara, marc.
+
+    DATA : W_CNT    TYPE I,
+           W_CNT2   TYPE I,
+           LV_TABIX TYPE SYST_TABIX,
+           LV_SNO   TYPE INT4,
+           QUANTITY TYPE KMPMG,
+           ME_QTY   TYPE MSEG-MENGE,
+           ME_QTY1  TYPE MSEG-MENGE.
+
+    DATA : WA_VARIANT TYPE DISVARIANT.
+* FOR VARIANT IMPORT
+    DATA : WA_I_VARIANT TYPE DISVARIANT.
+
+    DATA:MT_TABLE TYPE STANDARD TABLE OF  STPOX.
+
+    DATA : IT_FIELDCAT TYPE SLIS_T_FIELDCAT_ALV,
+           WA_FIELDCAT TYPE SLIS_FIELDCAT_ALV,
+           LV          TYPE DISVARIANT,
+           WA_LAYOUT   TYPE SLIS_LAYOUT_ALV.
+
+    DATA : QTY TYPE STPO-MENGE.
+
+    DATA : I_SORT TYPE SLIS_T_SORTINFO_ALV .
+    DATA : WA_SORT LIKE LINE OF I_SORT .
+
+    TYPES:BEGIN OF TY_MAST,
+            MATNR TYPE MAST-MATNR,
+            WERKS TYPE MAST-WERKS,
+            MAKTX TYPE MAKT-MAKTX,
+            BISMT TYPE MARA-BISMT,
+          END OF TY_MAST.
+
+    TYPES:BEGIN OF TY_T880,
+            RCOMP TYPE T880-RCOMP,
+            NAME1 TYPE T880-NAME1,
+          END OF TY_T880.
+
+    DATA : IT_MAST TYPE TABLE OF TY_MAST .
+*DATA : wa_mast TYPE ty_mast.
+
+    DATA : LT_T880 TYPE TABLE OF TY_T880 .
+    DATA : WA_T880 TYPE TY_T880.
+
+    DATA : IT_MAST1 TYPE TABLE OF TY_MAST .
+    DATA : WA_MAST1 TYPE TY_MAST.
+
+    DATA : IT_DYNP TYPE STANDARD TABLE OF DYNPREAD ."WITH HEADER LINE.
+    DATA: R_WERKS TYPE MARC-WERKS.
+
+    DATA:   T_STKO TYPE STANDARD TABLE OF STKO_API02.
+
+    DATA : SNO TYPE INT4.
+
+    TYPES : BEGIN OF TY_FINAL,
+              SNO       TYPE INT4,
+              MATNR     TYPE MARA-MATNR,
+              MEINS     TYPE MARA-MEINS,
+              BISMT     TYPE MARA-BISMT,
+              MAKTX     TYPE MAKT-MAKTX,
+              PLANT     TYPE MAST-WERKS,
+              COM_PLANT TYPE MAST-WERKS,
+              IDNRK     TYPE STPO-IDNRK,
+              COM_OLD   TYPE MARA-BISMT,
+              COM_DES   TYPE MAKT-MAKTX,
+*          menge     TYPE stpo-menge,
+              MENGE     TYPE P LENGTH 6 DECIMALS 7,
+              COM_MEINS TYPE STPO-MEINS,
+              COM_PRICE TYPE P LENGTH 16 DECIMALS 4,
+*          amount    TYPE mbew-verpr,
+              AMOUNT    TYPE P LENGTH 16 DECIMALS 7,
+              STLAL     TYPE MAST-STLAL,
+              EXTWG     TYPE MARA-EXTWG,
+              EXTWG_DES TYPE CHAR100,
+              LGFSB     TYPE MARC-LGFSB,
+              WAERS     TYPE EKKO-WAERS,
+              LIFNR     TYPE LIFNR,
+            END OF TY_FINAL.
+
+
+    DATA : IT_FINAL TYPE STANDARD TABLE OF TY_FINAL,
+           WA_FINAL TYPE TY_FINAL.
+
+    DATA : KT_FINAL TYPE STANDARD TABLE OF TY_FINAL,
+           KS_FINAL TYPE TY_FINAL.
+
+    DATA : GT_FINAL TYPE STANDARD TABLE OF TY_FINAL,
+           GS_FINAL TYPE TY_FINAL.
+
+
+    SELECT MA~MATNR,
+            MA~WERKS,
+            MT~MAKTX,
+            MR~EXTWG,
+            MR~MTART,
+            MR~MEINS,
+            MR~BISMT,
+            MK~STLAN
+*            MS~STLAL
+        FROM MAST AS MA
+        LEFT OUTER JOIN MARA AS MR
+        ON ( MR~MATNR = MA~MATNR )
+            LEFT OUTER JOIN MAKT AS MT
+        ON ( MR~MATNR = MT~MATNR )
+        LEFT OUTER JOIN MKAL AS MK
+        ON ( MA~MATNR = MK~MATNR AND MA~WERKS = MK~WERKS AND MK~STLAN = '1' )
+        LEFT OUTER JOIN MAST AS MS
+        ON ( MA~MATNR = MS~MATNR AND MA~WERKS = MS~WERKS  AND MK~STLAL = MS~STLAL )
+       INTO TABLE @DATA(IT_CKIS)
+      WHERE  MA~WERKS = '1100'.          " AND MA~matnr = 'FCA010001'.
+*  WHERE ma~matnr IN @s_matnr AND ma~werks IN @s_werks AND mr~extwg IN @s_extwg AND mr~mtart IN @s_mtart.
+
+    DELETE IT_CKIS WHERE MATNR = '2125N'.  """Added by dinesh on 01.07.2023  due to "Quantaties Ca't converted for Material 2125N
+    DELETE IT_CKIS WHERE MATNR = '2125P'.  """Added by dinesh on 01.07.2023  due to "Quantaties Ca't converted for Material 2125p
+
+
+    SORT IT_CKIS ASCENDING BY MATNR.
+    DELETE ADJACENT DUPLICATES FROM IT_CKIS COMPARING MATNR.
+
+    SELECT * FROM MARA INTO TABLE @DATA(IT_MARA1) WHERE MTART <> 'ZFG' AND MEINS <> 'NOS' .
+    SELECT * FROM MARA INTO TABLE @DATA(IT_MARA2) WHERE MTART <> 'ZFG'  .
+
+
+    LOOP AT IT_CKIS INTO DATA(WA_CKIS).
+
+      WA_FINAL-PLANT = WA_CKIS-WERKS.
+      WA_FINAL-MATNR = WA_CKIS-MATNR.
+      WA_FINAL-MAKTX = WA_CKIS-MAKTX.
+*      WA_FINAL-STLAL = WA_CKIS-STLAL.
+      WA_FINAL-EXTWG = WA_CKIS-EXTWG.
+      WA_FINAL-BISMT = WA_CKIS-BISMT.
+
+      SELECT SINGLE EWBEZ FROM TWEWT INTO WA_FINAL-EXTWG_DES WHERE EXTWG = WA_FINAL-EXTWG AND SPRAS =  'E'.
+
+      QTY = '100000'.
+
+      CALL FUNCTION 'CS_BOM_EXPL_MAT_V2'
+        EXPORTING
+*         FTREL                 = ' '
+*         ALEKZ                 = ' '
+*         ALTVO                 = ' '
+*         AUFSW                 = ' '
+*         AUMGB                 = ' '
+*         AUMNG                 = 0
+*         AUSKZ                 = ' '
+*         AMIND                 = ' '
+*         BAGRP                 = ' '
+*         BEIKZ                 = ' '
+*         BESSL                 = ' '
+*         BGIXO                 = ' '
+*         BREMS                 = ' '
+          CAPID                 = 'PP01'
+*         CHLST                 = ' '
+*         COSPR                 = ' '
+*         CUOBJ                 = 000000000000000
+*         CUOVS                 = 0
+*         CUOLS                 = ' '
+          DATUV                 = SY-DATUM
+*         DELNL                 = ' '
+*         DRLDT                 = ' '
+*         EHNDL                 = ' '
+          EMENG                 = QTY
+*         ERSKZ                 = ' '
+*         ERSSL                 = ' '
+*         FBSTP                 = ' '
+*         KNFBA                 = ' '
+*         KSBVO                 = ' '
+*         MBWLS                 = ' '
+          MKTLS                 = 'X'
+*         MDMPS                 = ' '
+          MEHRS                 = 'X'
+*         MKMAT                 = ' '
+*         MMAPS                 = ' '
+*         SALWW                 = ' '
+*         SPLWW                 = ' '
+*         MMORY                 = ' '
+          MTNRV                 = WA_FINAL-MATNR
+*         NLINK                 = ' '
+*         POSTP                 = ' '
+*         RNDKZ                 = ' '
+*         RVREL                 = ' '
+*         SANFR                 = ' '
+*         SANIN                 = ' '
+*         SANKA                 = ' '
+*         SANKO                 = ' '
+*         SANVS                 = ' '
+*         SCHGT                 = ' '
+*         STKKZ                 = ' '
+          STLAL                 = '01'            "wa_final-stlal
+          STLAN                 = '1'
+*         STPST                 = 0
+          SVWVO                 = 'X'
+          WERKS                 = WA_FINAL-PLANT
+*         NORVL                 = ' '
+*         MDNOT                 = ' '
+*         PANOT                 = ' '
+*         QVERW                 = ' '
+*         VERID                 = ' '
+*         VRSVO                 = 'X'
+*         SGT_SCAT              =
+*         SGT_REL               =
+*         CALLER_APP            =
+*         BOM_VERSN             =
+*       IMPORTING
+*         TOPMAT                =
+*         DSTST                 =
+        TABLES
+          STB                   = MT_TABLE
+*         MATCAT                =
+        EXCEPTIONS
+          ALT_NOT_FOUND         = 1
+          CALL_INVALID          = 2
+          MATERIAL_NOT_FOUND    = 3
+          MISSING_AUTHORIZATION = 4
+          NO_BOM_FOUND          = 5
+          NO_PLANT_DATA         = 6
+          NO_SUITABLE_BOM_FOUND = 7
+          CONVERSION_ERROR      = 8
+          OTHERS                = 9.
+      IF SY-SUBRC <> 0.
+* Implement suitable error handling here
+      ENDIF.
+
+      LOOP AT MT_TABLE INTO DATA(MS_TABLE).
+
+*      IF ms_table-mnglg IS NOT INITIAL .
+*        ms_table-mnglg = ms_table-mnglg / qty.
+*        endif.
+        IF MS_TABLE-IDNRK IS NOT INITIAL.
+          WA_FINAL-IDNRK = MS_TABLE-IDNRK.
+          WA_FINAL-COM_PLANT = MS_TABLE-WERKS.
+
+          SELECT SINGLE * FROM MAKT  INTO  @DATA(PS_MAKT)   WHERE MATNR = @WA_FINAL-IDNRK .
+
+          WA_FINAL-COM_DES = PS_MAKT-MAKTX.
+
+          CLEAR:PS_MAKT.
+
+
+          SELECT SINGLE * FROM MARA INTO @DATA(PS_MARA)  WHERE MATNR = @WA_FINAL-IDNRK.
+
+          WA_FINAL-COM_OLD = PS_MARA-BISMT.
+
+          CLEAR:PS_MARA.
+
+          IF MS_TABLE-MNGLG IS NOT INITIAL.
+
+            WA_FINAL-MENGE = MS_TABLE-MNGKO / QTY.
+            WA_FINAL-COM_MEINS = MS_TABLE-MEINS.
+
+          ENDIF.
+
+          SELECT SINGLE LGFSB FROM MARC INTO WA_FINAL-LGFSB WHERE MATNR = WA_FINAL-IDNRK AND WERKS = WA_FINAL-COM_PLANT .
+
+          IF WA_FINAL-LGFSB = '1192'.
+
+            WA_FINAL-COM_PLANT = '1200' .
+          ENDIF.
+
+
+          SELECT BUDAT , MATBF , WERKS , DMBTR , MENGE , EBELN , MBLNR , BWART ,BSTME , ERFMG, LIFNR
+                                              FROM MATDOC  INTO TABLE @DATA(IT_MATDOC)
+                                               WHERE MATNR = @WA_FINAL-IDNRK
+*                                                   AND werks IN @s_werks
+                                               AND EBELN <> ''
+                                               AND BWART = '101'
+                                               AND DMBTR <> 0 .
+          SORT IT_MATDOC DESCENDING BY BUDAT DMBTR .
+
+          READ TABLE IT_MARA2 INTO DATA(WA_MARA2) WITH KEY  MATNR = WA_FINAL-IDNRK .
+          WA_FINAL-MEINS = WA_MARA2-MEINS  .
+          CLEAR : WA_MARA2.
+
+
+          IF WA_FINAL-MEINS IS NOT INITIAL.
+            READ TABLE IT_MATDOC INTO DATA(WA_MATDOC) INDEX 1 .
+            SELECT SINGLE WAERS FROM EKKO  INTO WA_FINAL-WAERS WHERE  EBELN = WA_MATDOC-EBELN  .
+            IF WA_FINAL-MEINS <> WA_MATDOC-BSTME .
+              WA_FINAL-COM_PRICE = WA_MATDOC-DMBTR / WA_MATDOC-ERFMG.
+              WA_FINAL-COM_PRICE = WA_FINAL-COM_PRICE / 100 .
+            ELSE.
+              WA_FINAL-COM_PRICE = WA_MATDOC-DMBTR / WA_MATDOC-MENGE.
+              WA_FINAL-COM_PRICE = WA_FINAL-COM_PRICE / 100 .
+            ENDIF.
+          ENDIF.
+
+          WA_FINAL-LIFNR = WA_MATDOC-LIFNR.
+
+
+          IF  WA_FINAL-COM_PRICE IS INITIAL.
+
+            SELECT EP~MATNR,
+                   EP~WERKS,
+                   EP~NETPR,
+                   EP~LOEKZ,
+                   EP~AEDAT,
+                   EK~WAERS,
+                   EK~WKURS,
+                   EK~BSART
+              FROM EKPO AS EP
+              INNER JOIN EKKO AS EK ON EP~EBELN = EK~EBELN
+              INTO TABLE @DATA(LS_EKPO) WHERE MATNR = @WA_FINAL-IDNRK
+            AND WERKS = @WA_FINAL-COM_PLANT AND EP~LOEKZ = ' ' AND EK~BSART  IN ( 'ZDOM', 'ZIMP' ).
+
+            SORT LS_EKPO DESCENDING BY AEDAT.
+
+
+            DELETE ADJACENT DUPLICATES FROM LS_EKPO COMPARING MATNR.
+
+            READ TABLE LS_EKPO INTO DATA(WA_EKPO) WITH KEY  MATNR = WA_FINAL-IDNRK WERKS = WA_FINAL-COM_PLANT.
+
+            IF WA_EKPO-WAERS = 'INR'.
+              WA_FINAL-COM_PRICE = WA_EKPO-NETPR / 100.
+
+              CLEAR : LS_EKPO, WA_EKPO.
+            ELSE .
+              WA_EKPO-NETPR = ( WA_EKPO-NETPR * WA_EKPO-WKURS ) / 100 .
+              WA_FINAL-COM_PRICE = WA_EKPO-NETPR .
+
+            ENDIF.
+
+          ENDIF.
+
+          IF WA_FINAL-COM_PRICE IS INITIAL.
+
+            SELECT EP~MATNR,
+                   EP~WERKS,
+                   EP~NETPR,
+                   EP~LOEKZ,
+                   EP~AEDAT,
+                   EK~BSART
+              FROM EKPO AS EP
+              INNER JOIN EKKO AS EK ON EP~EBELN = EK~EBELN
+              INTO TABLE @DATA(LS_EKPO1) WHERE MATNR = @WA_FINAL-IDNRK
+            AND WERKS = '1200' AND EP~LOEKZ = ' ' AND EK~BSART  IN ( 'ZDOM', 'ZIMP' ).
+
+            SORT LS_EKPO1 DESCENDING BY AEDAT.
+
+            DELETE ADJACENT DUPLICATES FROM LS_EKPO1 COMPARING MATNR.
+
+            READ TABLE LS_EKPO1 INTO DATA(WA_EKPO1) WITH KEY  MATNR = WA_FINAL-IDNRK WERKS = '1200'.
+            WA_FINAL-COM_PRICE = WA_EKPO1-NETPR / 100.
+
+            CLEAR : LS_EKPO1, WA_EKPO1.
+          ENDIF.
+
+          IF WA_FINAL-COM_PRICE IS INITIAL.
+
+            SELECT EP~MATNR,
+                   EP~WERKS,
+                   EP~NETPR,
+                   EP~LOEKZ,
+                   EP~AEDAT,
+                   EK~BSART
+              FROM EKPO AS EP
+              INNER JOIN EKKO AS EK ON EP~EBELN = EK~EBELN
+              INTO TABLE @DATA(LS_EKPO2) WHERE MATNR = @WA_FINAL-IDNRK
+            AND WERKS = '1100' AND EP~LOEKZ = ' ' AND EK~BSART  IN ( 'ZDOM', 'ZIMP' ).
+
+
+            SORT LS_EKPO2 DESCENDING BY AEDAT.
+
+            DELETE ADJACENT DUPLICATES FROM LS_EKPO2 COMPARING MATNR.
+
+            READ TABLE LS_EKPO2 INTO DATA(WA_EKPO2) WITH KEY  MATNR = WA_FINAL-IDNRK WERKS = '1100'.
+            WA_FINAL-COM_PRICE = WA_EKPO2-NETPR / 100.
+
+            CLEAR : LS_EKPO2, WA_EKPO2.
+          ENDIF.
+
+          IF WA_FINAL-COM_PRICE IS INITIAL.
+            SELECT SINGLE * FROM MBEW INTO @DATA(LS_MBEW1) WHERE MATNR = @WA_FINAL-IDNRK AND BWKEY = @WA_FINAL-COM_PLANT.
+
+            IF LS_MBEW1 IS NOT INITIAL.
+
+              IF LS_MBEW1-VPRSV = 'V'.
+                WA_FINAL-COM_PRICE = LS_MBEW1-VERPR / 100.
+              ENDIF.
+
+            ENDIF.
+            CLEAR:LS_MBEW1.
+          ENDIF.
+
+          IF WA_FINAL-COM_PRICE IS INITIAL.
+            SELECT SINGLE * FROM MBEW INTO @DATA(LS3_MBEW) WHERE MATNR = @WA_FINAL-IDNRK AND BWKEY = '1200'.
+
+            IF LS3_MBEW IS NOT INITIAL.
+
+              IF LS3_MBEW-VPRSV = 'V'.
+                WA_FINAL-COM_PRICE = LS3_MBEW-VERPR / 100.
+              ENDIF.
+
+            ENDIF.
+            CLEAR:LS3_MBEW.
+
+          ENDIF.
+
+          IF WA_FINAL-COM_PRICE IS INITIAL.
+            SELECT SINGLE * FROM MBEW INTO @DATA(LS4_MBEW) WHERE MATNR = @WA_FINAL-IDNRK AND BWKEY = '1100'.
+
+            IF LS4_MBEW IS NOT INITIAL.
+
+              IF LS4_MBEW-VPRSV = 'V'.
+                WA_FINAL-COM_PRICE = LS4_MBEW-VERPR / 100.
+              ENDIF.
+
+            ENDIF.
+            CLEAR:LS3_MBEW.
+          ENDIF.
+
+          SELECT * FROM ZLANDCOST WHERE MATNR = @WA_FINAL-IDNRK
+          INTO TABLE @DATA(IT_LC) .
+
+          READ TABLE IT_LC INTO DATA(LS_LC) WITH KEY  MATNR = WA_FINAL-IDNRK  .
+          WA_FINAL-COM_PRICE = WA_FINAL-COM_PRICE + LS_LC-NETPR.
+          CLEAR : LS_LC , IT_LC .
+
+        ENDIF.
+        """""""""""" Last Price for Component"""""""""""""""""
+
+        IF WA_FINAL-MENGE IS NOT INITIAL AND WA_FINAL-COM_PRICE IS NOT INITIAL.
+          WA_FINAL-AMOUNT = WA_FINAL-MENGE * WA_FINAL-COM_PRICE.
+        ENDIF.
+
+        SNO = SNO + 1.
+        WA_FINAL-SNO =   SNO .
+
+        APPEND : WA_FINAL TO IT_FINAL.
+        CLEAR : WA_FINAL-SNO,
+                WA_FINAL-IDNRK,
+                WA_FINAL-COM_DES,
+                 WA_FINAL-MENGE,
+                 WA_FINAL-COM_PRICE,
+                 WA_FINAL-AMOUNT,
+                 WA_MATDOC ,
+                 WA_FINAL-COM_MEINS.
+
+
+      ENDLOOP.
+    ENDLOOP.
+
+    KT_FINAL[] = IT_FINAL[].
+    GT_FINAL[] = IT_FINAL[].
+
+    LOOP AT KT_FINAL INTO KS_FINAL.
+
+      SELECT SINGLE * FROM MAST INTO @DATA(IT_MAST2) WHERE MATNR = @KS_FINAL-IDNRK AND WERKS = @KS_FINAL-PLANT.
+      IF SY-SUBRC = 0.
+        DELETE GT_FINAL WHERE IDNRK = KS_FINAL-IDNRK.
+      ENDIF.
+    ENDLOOP.
+
+    IT_FINAL[] = GT_FINAL[].
+
+    LOOP AT IT_FINAL INTO DATA(WA_BOM1).
+
+*      WA_BOM-FG_MATERIAL = WA_BOM1-MATNR.
+*      WA_BOM-OLD_MATERIAL = WA_BOM1-BISMT.
+*      WA_BOM-FG_DESCRIPTION = WA_BOM1-MAKTX.
+      WA_BOM-COMPONENT             = WA_BOM1-IDNRK .
+      WA_BOM-COMPONENT_DESCRIPTION = WA_BOM1-COM_DES.
+      WA_BOM-LAST_PUR_PRICE        = WA_BOM1-COM_PRICE.
+      WA_BOM-SUPPLIER              = WA_BOM1-LIFNR.
+         SELECT SINGLE name1 FROM lfa1 INTO WA_BOM-SUPPLIERNAME WHERE LIFNR = WA_BOM-SUPPLIER.
+
+      CONDENSE : WA_BOM-COMPONENT.
+
+      APPEND : WA_BOM TO IT_BOM.
+     CLEAR : WA_BOM.
+
+    ENDLOOP.
+
+    SORT IT_BOM BY COMPONENT ASCENDING.
+*    delete IT_BOM WHERE COMPONENT <> 'FCA010001'.
+    DELETE ADJACENT DUPLICATES FROM IT_BOM COMPARING ALL FIELDS.
+
+
+    DATA(json_writer) = cl_sxml_string_writer=>create(
+                          type = if_sxml=>co_xt_json ).
+    CALL TRANSFORMATION id SOURCE result = it_bom
+                           RESULT XML json_writer.
+    DATA(json) = json_writer->get_output( ).
+
+    DATA: lo_json_data TYPE REF TO zcl_trex_json_serializer,
+          json1        TYPE string.
+
+    CREATE OBJECT lo_json_data
+      EXPORTING
+        data = it_bom.
+
+* serialize data
+
+    lo_json_data->serialize( ).
+
+* get serialized json data string
+
+    json1 = lo_json_data->get_data( ).
+
+    "cl_demo_output=>get converts ABAP data to HTML and is secure
+*    server->response->set_cdata(
+*      data = cl_demo_output=>get( connections ) ).
+    server->response->set_cdata(
+      data = json1 ).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ENDMETHOD.
