@@ -1,0 +1,545 @@
+*&---------------------------------------------------------------------*
+*& Report ZMM_MASTERDATA_REPORT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zmm_masterdata_report_222.
+
+TABLES : kna1  , adrc.
+
+
+TYPES : BEGIN OF ty_kna1,
+          kunnr TYPE kna1-kunnr,
+          adrnr TYPE kna1-adrnr,
+          stcd3 TYPE kna1-stcd3,
+          erdat TYPE kna1-erdat,
+          aedat TYPE kna1-aedat,
+          land1 TYPE  kna1-land1,
+          regio TYPE  kna1-regio,
+        END OF ty_kna1.
+
+
+TYPES : BEGIN OF ty_adrc,
+          addrnumber TYPE adrc-addrnumber,
+          name1      TYPE adrc-name1,
+          city1      TYPE adrc-city1,
+          sort1      TYPE adrc-sort1,
+          street     TYPE  adrc-street,
+          house_num1 TYPE adrc-house_num1,
+          post_code1 TYPE adrc-post_code1,
+          country    TYPE adrc-country,
+          region     TYPE adrc-region,
+          tel_number TYPE adrc-tel_number,
+          str_suppl1 TYPE adrc-str_suppl1,
+          str_suppl2 TYPE adrc-str_suppl2,
+          str_suppl3 TYPE adrc-str_suppl3,
+        END OF ty_adrc.
+
+TYPES : BEGIN OF ty_knvv,
+          kunnr TYPE  knvv-kunnr,
+          vkorg TYPE  knvv-vkorg,
+          vtweg TYPE  knvv-vtweg,
+          spart TYPE  knvv-spart,
+          vkgrp TYPE knvv-vkgrp,
+          bzirk TYPE  knvv-bzirk,
+          konda TYPE  knvv-konda,
+          vsbed TYPE  knvv-vsbed,
+          zterm TYPE  knvv-zterm,
+          pltyp TYPE  knvv-pltyp,
+          kalks TYPE   knvv-kalks,
+          inco1 TYPE  knvv-inco1,
+          inco2 TYPE  knvv-inco2,
+
+        END OF ty_knvv.
+
+
+TYPES : BEGIN OF ty_final,
+          kunnr      TYPE kna1-kunnr,
+          adrnr      TYPE kna1-adrnr,
+          stcd3      TYPE kna1-stcd3,
+          erdat      TYPE kna1-erdat,
+          aedat      TYPE kna1-aedat,
+          land1      TYPE  kna1-land1,
+          regio      TYPE  kna1-regio,
+          addrnumber TYPE adrc-addrnumber,
+          name1      TYPE adrc-name1,
+          city1      TYPE adrc-city1,
+          sort1      TYPE adrc-sort1,
+          street     TYPE  adrc-street,
+          house_num1 TYPE adrc-house_num1,
+          post_code1 TYPE adrc-post_code1,
+          country    TYPE adrc-country,
+          region     TYPE adrc-region,
+          tel_number TYPE adrc-tel_number,
+          str_suppl1 TYPE adrc-str_suppl1,
+          str_suppl2 TYPE adrc-str_suppl2,
+          str_suppl3 TYPE adrc-str_suppl3,
+          kunnr1     TYPE  knvv-kunnr,
+          vkorg      TYPE  knvv-vkorg,
+          vtweg      TYPE  knvv-vtweg,
+          spart      TYPE  knvv-spart,
+          vkgrp      TYPE knvv-vkgrp,
+          bzirk      TYPE  knvv-bzirk,
+          konda      TYPE  knvv-konda,
+          vsbed      TYPE  knvv-vsbed,
+          zterm      TYPE  knvv-zterm,
+          pltyp      TYPE  knvv-pltyp,
+          kalks      TYPE   knvv-kalks,
+          inco1      TYPE  knvv-inco1,
+          inco2      TYPE  knvv-inco2,
+          smtp_addr  TYPE adr6-smtp_addr,
+          text1      TYPE  t052u-text1,
+          bztxt      TYPE  t171t-bztxt,
+          bland      TYPE  t005u-bland,
+          bezei      TYPE t005u-bezei,
+
+          addr       TYPE adrc-addrnumber,
+          addr1       TYPE adrc-addrnumber,
+          house      TYPE adrc-house_num1,
+          mc         TYPE adrc-mc_city1,
+          st         TYPE adrc-street,
+          post       TYPE adrc-post_code1,
+          ship       TYPE char100,
+          standard       TYPE char100,
+         smtp_addr1  TYPE adr6-smtp_addr,
+         status       TYPE char10,
+         STAT2       TYPE CHAR20, " ADDED BY KESA
+
+        END OF ty_final.
+
+
+DATA : it_kna1 TYPE STANDARD TABLE OF ty_kna1,
+       wa_kna1 TYPE ty_kna1.
+
+
+DATA : it_adrc TYPE STANDARD TABLE OF ty_adrc,
+       wa_adrc TYPE ty_adrc.
+
+
+
+DATA : it_knvv TYPE STANDARD TABLE OF ty_knvv,
+       wa_knvv TYPE ty_knvv.
+
+DATA : it_final TYPE STANDARD TABLE OF ty_final,
+       wa_final TYPE ty_final.
+
+DATA : it_fieldcat TYPE slis_t_fieldcat_alv,
+       wa_fieldcat TYPE slis_fieldcat_alv,
+       lv          TYPE disvariant,
+       wa_layout   TYPE slis_layout_alv.
+
+DATA: i_sort  TYPE slis_t_sortinfo_alv,
+      wa_sort LIKE LINE OF i_sort.
+
+
+DATA : i_events  TYPE slis_t_event .
+DATA : wa_events LIKE LINE OF i_events.
+data : w_tabix TYPE sy-index.
+
+
+SELECTION-SCREEN:BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+
+  SELECT-OPTIONS : s_kunnr FOR kna1-kunnr.
+
+
+SELECTION-SCREEN END OF BLOCK b1.
+""""""""""""""""""""""""""""""""addition of radio buttons """"""""""""""""""""""""""""added by kesavini 8/4/24
+SELECTION-SCREEN:BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-001.
+PARAMETERS : rb5 RADIOBUTTON GROUP rg,
+             rb1 RADIOBUTTON GROUP rg,
+             rb2 RADIOBUTTON GROUP rg,
+             rb3 RADIOBUTTON GROUP rg,
+             rb4 RADIOBUTTON GROUP rg.
+             .
+SELECTION-SCREEN END OF BLOCK b2.
+AT SELECTION-SCREEN OUTPUT.
+
+AT SELECTION-SCREEN on s_kunnr.
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+START-OF-SELECTION.
+
+  PERFORM get_data.
+  PERFORM field_cat.
+  PERFORM display_data.
+
+
+
+FORM get_data.
+
+
+  SELECT
+      kunnr
+        adrnr
+        stcd3
+        erdat
+        aedat
+         land1
+        regio
+
+     FROM kna1
+    INTO TABLE it_kna1 WHERE kunnr IN s_kunnr.
+
+
+
+  SELECT
+        addrnumber
+         name1
+         city1
+         sort1
+         street
+         house_num1
+         post_code1
+         country
+         region
+         tel_number
+         str_suppl1
+         str_suppl2
+         str_suppl3
+     FROM adrc
+     INTO  TABLE it_adrc
+     FOR ALL ENTRIES IN it_kna1
+     WHERE addrnumber = it_kna1-adrnr.
+
+
+  SELECT
+        kunnr
+       vkorg
+       vtweg
+       spart
+       vkgrp
+       bzirk
+       konda
+       vsbed
+       zterm
+       pltyp
+       kalks
+       inco1
+       inco2
+
+         FROM knvv INTO TABLE it_knvv
+        FOR ALL ENTRIES IN it_kna1
+        WHERE kunnr = it_kna1-kunnr.
+
+
+  SELECT * FROM t005u INTO TABLE @DATA(it_t5) FOR ALL ENTRIES IN @it_kna1 WHERE land1 = @it_kna1-land1 AND bland = @it_kna1-regio AND spras EQ 'E'.
+  SELECT * FROM but020 INTO TABLE @DATA(it_ks) FOR ALL ENTRIES IN @it_kna1 WHERE partner = @it_kna1-kunnr.
+  SORT it_ks BY addrnumber DESCENDING.
+
+
+*  LOOP AT it_kna1 INTO wa_kna1.
+LOOP AT it_knvv INTO wa_knvv. " added by kesavini 8/4/24
+    wa_final-kunnr  = wa_knvv-kunnr.
+    wa_final-vkorg  = wa_knvv-vkorg.
+    wa_final-vtweg  = wa_knvv-vtweg.
+    wa_final-spart  = wa_knvv-spart.
+    wa_final-vkgrp  = wa_knvv-vkgrp.
+    wa_final-bzirk  = wa_knvv-bzirk.
+    wa_final-konda = wa_knvv-konda.
+    wa_final-vsbed = wa_knvv-vsbed.
+    wa_final-zterm  = wa_knvv-zterm.
+    wa_final-pltyp  = wa_knvv-pltyp.
+    wa_final-kalks  = wa_knvv-kalks.
+    wa_final-inco2  = wa_knvv-inco2.
+READ TABLE it_kna1 INTO wa_kna1 WITH key kunnr = wa_final-kunnr.
+*    wa_final-kunnr  = wa_kna1-kunnr.
+    wa_final-adrnr  = wa_kna1-adrnr.
+    wa_final-stcd3  = wa_kna1-stcd3.
+    wa_final-erdat  = wa_kna1-erdat.
+    wa_final-aedat  = wa_kna1-aedat.
+    wa_final-land1  = wa_kna1-land1.
+    wa_final-regio  = wa_kna1-regio.
+
+    READ TABLE it_ks INTO DATA(wa_ks) WITH KEY partner = wa_final-kunnr.
+    wa_final-addr = wa_ks-addrnumber.
+
+
+
+
+    READ TABLE  it_adrc  INTO wa_adrc  WITH  KEY addrnumber = wa_final-adrnr.
+    wa_final-addrnumber  = wa_adrc-addrnumber.
+    wa_final-name1  = wa_adrc-name1.
+    wa_final-city1       = wa_adrc-city1.
+    wa_final-sort1       = wa_adrc-sort1.
+    wa_final-street      = wa_adrc-street.
+    wa_final-house_num1  = wa_adrc-house_num1.
+    wa_final-post_code1  = wa_adrc-post_code1.
+    wa_final-country     = wa_adrc-country.
+    wa_final-region      = wa_adrc-region.
+    wa_final-tel_number  = wa_adrc-tel_number.
+    wa_final-str_suppl1  = wa_adrc-str_suppl1.
+    wa_final-str_suppl2  = wa_adrc-str_suppl2.
+    wa_final-str_suppl3  = wa_adrc-str_suppl3.
+
+
+    SELECT SINGLE smtp_addr FROM adr6 INTO wa_final-smtp_addr WHERE addrnumber = wa_final-addrnumber .
+
+
+
+
+*    READ TABLE  it_knvv INTO wa_knvv WITH  KEY kunnr = wa_final-kunnr.
+*    wa_final-vkorg  = wa_knvv-vkorg.
+*    wa_final-vtweg  = wa_knvv-vtweg.
+*    wa_final-spart  = wa_knvv-spart.
+*    wa_final-vkgrp  = wa_knvv-vkgrp.
+*    wa_final-bzirk  = wa_knvv-bzirk.
+*    wa_final-konda = wa_knvv-konda.
+*    wa_final-vsbed = wa_knvv-vsbed.
+*    wa_final-zterm  = wa_knvv-zterm.
+*    wa_final-pltyp  = wa_knvv-pltyp.
+*    wa_final-kalks  = wa_knvv-kalks.
+*    wa_final-inco2  = wa_knvv-inco2.
+
+
+
+    READ TABLE it_t5 INTO DATA(wa_t5) WITH KEY land1 = wa_kna1-land1 bland = wa_kna1-regio.
+    wa_final-bland = wa_t5-bland.
+    wa_final-bezei = wa_t5-bezei.
+
+    SELECT SINGLE text1 FROM t052u INTO wa_final-text1 WHERE zterm = wa_final-zterm.
+    SELECT SINGLE bztxt FROM t171t INTO wa_final-bztxt WHERE bzirk = wa_final-bzirk.
+
+    SELECT SINGLE house_num1 FROM adrc INTO wa_final-house WHERE addrnumber = wa_final-addr.
+    SELECT SINGLE street FROM adrc INTO wa_final-st WHERE addrnumber = wa_final-addr.
+    SELECT SINGLE mc_city1 FROM adrc INTO wa_final-mc WHERE addrnumber = wa_final-addr.
+    SELECT SINGLE post_code1 FROM adrc INTO wa_final-post WHERE addrnumber = wa_final-addr.
+
+*        WA_FINAL-ship = | { wa_final-house }, { wa_final-st }, { wa_final-mc }-{ wa_final-post }. |. """"""""ÄDDED KAMATCHI SELVAM
+*        WA_FINAL-standard = | { wa_final-house_num1 }, { wa_final-street }, { wa_final-CITY1 }-{ wa_final-POST_CODE1 }. |. """"""""ÄDDED KAMATCHI SELVAM
+
+   SELECT SINGLE ADDRCOMM FROM BUT000 INTO WA_FINAL-ADDR1 WHERE PARTNER = WA_FINAL-KUNNR.
+   SELECT SINGLE XDELE    FROM BUT000 INTO @DATA(XDELE) WHERE PARTNER = @WA_FINAL-KUNNR.
+
+     IF XDELE = 'X'.
+       WA_FINAL-STATUS  = 'Inactive'.
+     ELSE.
+       WA_FINAL-STATUS  = 'Active'.
+     ENDIF.
+"''''''''''''''' ADDED BY KESA 9/4/24
+*     IF RB1 = 'X'.
+      if wa_final-vtweg = 10 and wa_final-spart = 10.
+      wa_final-stat2 = 'Domestic'.
+      ENDIF.
+
+*     IF RB2 = 'X'.
+      if wa_final-vtweg = 10 and wa_final-spart = 20.
+      wa_final-stat2 = 'Raw Material'.
+      ENDIF.
+
+*     IF RB3 = 'X'.
+      if wa_final-vtweg = 30 and wa_final-spart = 10.
+      wa_final-stat2 = 'Cuttack'.
+      ENDIF.
+      if wa_final-vtweg = 20." and wa_final-spart = 10.
+      wa_final-stat2 = 'Export'.
+      ENDIF.
+
+
+ """"""""""""""
+
+   SELECT SINGLE SMTP_ADDR FROM ADR6 INTO WA_FINAL-SMTP_ADDR1 WHERE ADDRNUMBER = WA_FINAL-ADDR1.
+
+
+
+    APPEND : wa_final TO it_final.
+    CLEAR : wa_final.
+
+
+
+*
+  ENDLOOP.
+
+
+"""""""""""""""""""""""""ADDED BY kesavini 8/4/24 """"""""""""""""""""""""""""""""
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+
+    IF RB2 IS NOT INITIAL .
+
+  SORT IT_FINAL BY VTWEG ASCENDING ."SPART ASCENDING.
+  DELETE IT_FINAL WHERE VTWEG NE 10 ."AND SPART NE 10.
+  DELETE IT_FINAL WHERE SPART NE 10.
+
+ENDIF.
+
+IF RB3  IS NOT INITIAL  .
+
+  SORT IT_FINAL BY VTWEG ASCENDING SPART ASCENDING.
+  DELETE IT_FINAL WHERE VTWEG NE 10 ."AND SPART NE 10.
+  DELETE IT_FINAL WHERE SPART NE 20.
+
+ENDIF.
+
+IF RB4  IS NOT INITIAL .
+
+  SORT IT_FINAL ASCENDING BY   VTWEG spart.
+
+  DELETE IT_FINAL WHERE VTWEG ne 30 .
+  DELETE IT_FINAL WHERE SPART NE 10.
+
+
+ENDIF.
+IF RB1  IS NOT INITIAL .
+
+  SORT IT_FINAL ASCENDING BY   VTWEG spart.
+
+  DELETE IT_FINAL WHERE vtweg <> '20' .
+  SORT IT_FINAL by KUNNR.
+*  DELETE IT_FINAL WHERE KUNNR+0(2) <> 'CE' .
+
+ENDIF.
+
+ENDFORM.
+
+
+
+
+
+
+FORM field_cat.
+
+  PERFORM genfcat USING 'CUSTOMER'                     'KUNNR'           '1' '' ''.
+  PERFORM genfcat USING 'NAME1'                       'NAME1'            '2' '' ''.
+  PERFORM genfcat USING 'CITY'                         'CITY1'           '3' '' ''.
+  PERFORM genfcat USING 'SEARCH TERM'                  'SORT1'           '4' '' ''.
+  PERFORM genfcat USING 'STREET1'                      'STREET'           '5' '' ''.
+  PERFORM genfcat USING 'STREET2'                      'STR_SUPPL1'           '5' '' ''.
+  PERFORM genfcat USING 'STREET3'                      'STR_SUPPL2'           '5' '' ''.
+  PERFORM genfcat USING 'STREET4'                      'STR_SUPPL3'           '5' '' ''.
+  PERFORM genfcat USING 'HOUSE NUMBER'                 'HOUSE_NUM1'      '6' '' ''.
+  PERFORM genfcat USING 'POSTAL CODE'                  'POST_CODE1'      '7' '' ''.
+  PERFORM genfcat USING 'COUNTRY'                      'COUNTRY'         '8' '' ''.
+  PERFORM genfcat USING 'REGION'                      'REGIO'           '9' '' ''.
+*  PERFORM genfcat USING 'ADDRESS'                      'STANDARD'           '6' '' ''.
+  PERFORM genfcat USING 'REGION NAME'                 'BEZEI'           '10' '' ''.
+  PERFORM genfcat USING 'TELEPHONE'                  'TEL_NUMBER'        '11' '' ''.
+  PERFORM genfcat USING 'GST'                          'STCD3'           '12' '' ''.
+  PERFORM genfcat USING 'CREATED DATE'                 'ERDAT'           '13' '' ''.
+  PERFORM genfcat USING 'CHANGED DATE'                 'AEDAT'           '14' '' ''.
+  PERFORM genfcat USING 'SALES ORGANISATION'           'VKORG'           '15' '' ''.
+  PERFORM genfcat USING 'DISTRIBUTION'                 'VTWEG'           '16' '' ''.
+  PERFORM genfcat USING 'DIVISION'                     'SPART'           '17' '' ''.
+  PERFORM genfcat USING 'SALES GROUP'                'VKGRP'           '18' '' ''.
+  PERFORM genfcat USING 'SALES DIS '              'BZIRK'           '19' '' ''.
+  PERFORM genfcat USING 'SALES DIS DESC'              'BZTXT'           '20' '' ''.
+  PERFORM genfcat USING 'CUS PRICE GROUP'             'KONDA'           '21' '' ''.
+  PERFORM genfcat USING 'SHIPPING COND'               'VSBED'           '22' '' ''.
+  PERFORM genfcat USING 'PAYMENT TREMS'               'ZTERM'           '23' '' ''.
+  PERFORM genfcat USING 'PRICE LIST TYPE'             'PLTYP'           '24' '' ''.
+  PERFORM genfcat USING 'INTERSTATE'                  'KALKS'           '25' '' ''.
+  PERFORM genfcat USING 'INCOTERMS'                    'INCO2'           '26' '' ''.
+  PERFORM genfcat USING 'Email'                      'SMTP_ADDR '        '27' '' ''.
+  PERFORM genfcat USING 'Payment Terms desc'         'TEXT1'             '28' '' ''.
+*  PERFORM genfcat USING 'Shipping Address'         'SHIP'             '29' '' ''.
+  PERFORM genfcat USING 'CC MAIL ID'             'SMTP_ADDR1'             '30' '' ''.
+  PERFORM genfcat USING 'Status'                 'STATUS'                 '30' '' ''.
+  PERFORM genfcat USING 'TYPE'                       'STAT2'                    '34' '' ''.
+
+
+
+
+ENDFORM.
+FORM genfcat  USING    VALUE(p_0122)
+  VALUE(p_0123)
+  VALUE(p_0124)
+  VALUE(p_0125)
+  VALUE(p_0126).
+  wa_fieldcat-col_pos    = p_0124.
+  wa_fieldcat-fieldname  = p_0123.
+  wa_fieldcat-seltext_l  = p_0122.
+  wa_fieldcat-lowercase  = 'X'.
+  wa_fieldcat-do_sum  = p_0125.
+  wa_fieldcat-no_zero  = p_0126.
+
+  APPEND wa_fieldcat TO it_fieldcat.
+  CLEAR wa_fieldcat.
+
+ENDFORM.
+
+FORM display_data.
+  wa_layout-colwidth_optimize = 'X'.
+*  DATA: lv_repid TYPE sy-repid.
+*  wa_layout-no_colhead = 'X'.
+
+  wa_layout-info_fieldname = 'ROW_COLOR'.
+  wa_layout-colwidth_optimize = 'X'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+*     I_INTERFACE_CHECK  = ' '
+*     I_BYPASSING_BUFFER = ' '
+*     I_BUFFER_ACTIVE    = ' '
+      i_callback_program = sy-repid
+*     I_CALLBACK_PF_STATUS_SET    = ' '
+*     I_CALLBACK_USER_COMMAND     = ' '
+*     i_callback_top_of_page = 'TOP-OF-PAGE'
+*     i_callback_html_top_of_page = 'TOP-OF-PAGE'
+*     I_CALLBACK_HTML_END_OF_LIST = ' '
+*     I_STRUCTURE_NAME   =
+*     I_BACKGROUND_ID    = ' '
+*     I_GRID_TIT  LE                      = '               Rupees in Lakh'
+*     I_GRID_SETTINGS    =
+      is_layout          = wa_layout
+      it_fieldcat        = it_fieldcat
+*     IT_EXCLUDING       =
+*     IT_SPECIAL_GROUPS  =
+      it_sort            = i_sort
+*     IT_FILTER          =
+*     IS_SEL_HIDE        =
+*     I_DEFAULT          = 'X'
+      i_save             = 'A'
+      is_variant         = lv
+*     IT_EVENTS          = I_EVENTS
+*     IT_EVENT_EXIT      =
+*     IS_PRINT           =
+*     IS_REPREP_ID       =
+*     I_SCREEN_START_COLUMN  = 0
+*     I_SCREEN_START_LINE    = 0
+*     I_SCREEN_END_COLUMN    = 0
+*     I_SCREEN_END_LINE  = 0
+*     I_HTML_HEIGHT_TOP  = 0
+*     I_HTML_HEIGHT_END  = 0
+*     IT_ALV_GRAPHICS    =
+*     IT_HYPERLINK       =
+*     IT_ADD_FIELDCAT    =
+*     IT_EXCEPT_QINFO    =
+*     IR_SALV_FULLSCREEN_ADAPTER  =
+* IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER     =
+*     ES_EXIT_CAUSED_BY_USER =
+    TABLES
+      t_outtab           = it_final
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+ENDFORM.
+
+*FORM top-of-page.
+*
+*  DATA : it_listheader TYPE slis_t_listheader,
+*         wa_listheader TYPE slis_listheader.
+*
+*  wa_listheader-typ   = 'H'.
+*  wa_listheader-info  = 'Sales Invoice Pick Details'.
+*  APPEND wa_listheader TO  it_listheader.
+*  CLEAR :  wa_listheader.
+*
+*  APPEND wa_listheader TO it_listheader.
+*  CLEAR wa_listheader.
+*
+*  wa_listheader-typ  = 'S'.
+*  CONCATENATE 'DATE : ' sy-datum+6(2) '.' sy-datum+4(2) '.' sy-datum(4)' ' ' ' INTO wa_listheader-info SEPARATED BY space.
+*
+*  APPEND wa_listheader TO it_listheader.
+*  CLEAR: wa_listheader.
+*
+*
+*  CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+*    EXPORTING
+*      it_list_commentary = it_listheader.
+*ENDFORM.
