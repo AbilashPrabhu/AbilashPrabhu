@@ -1,0 +1,192 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+
+    CALL METHOD ME->GET_USERDETAILS
+      EXPORTING
+        SERVER   = SERVER          " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        FROMDATE = DATA(F_DATE)          " ABAP system field: Current date of application server
+        TODATE   = DATA(T_DATE).          " ABAP system field: Current date of application server
+
+
+    TYPES : BEGIN OF TY_STRU,
+              INBOUND_DELIVERY    TYPE VBELN,
+              DOCUMENT_DATE       TYPE CHAR10,
+              SUPPLIER            TYPE LIFNR,
+              SUPPLIERNAME        TYPE NAME1,
+              DELIVERY_DATE       TYPE CHAR10,
+              ACTUALGRDATE        TYPE CHAR10,
+              NOOFPACKAGE         TYPE CHAR15,
+              GMGOODSMOVEMENT     TYPE CHAR15,
+              ACTUALGDSMOVEMENT   TYPE CHAR10,
+              ITEM                TYPE CHAR6,
+              ITEMCATEGORY        TYPE CHAR10,
+              PLANT               TYPE WERKS_D,
+              STORAGELOCATION     TYPE LGORT_D,
+              STORAGELOCATIONDESC TYPE CHAR35,
+              MATERIAL            TYPE MATNR,
+              DELIVERYQTY         TYPE CHAR15,
+              SALES_UNIT          TYPE MEINS,
+              MOVEMENTTYPE        TYPE BWART,
+              MOVEMENTTYPEDESC    TYPE CHAR20,
+              ITEMDESCRIPTION     TYPE CHAR30,
+              ORIGDELIVERYQTY     TYPE CHAR15,
+              REFERENCEDOC        TYPE CHAR10,
+              REFERENCEITEM       TYPE CHAR5,
+              EXTERNALID          TYPE VERUR_VL,
+              INBOUNDDLYGROUP     TYPE BORGR_GRP,
+              CREATEDBY           TYPE CHAR15,
+              CREATEDONANDTIME    TYPE CHAR20,
+*              CREATEDTIME         TYPE CHAR10,
+              CHANGEBY            TYPE CHAR15,
+              CHANGEON            TYPE CHAR10,
+              DELIVERYTYPE        TYPE CHAR10,
+              DELIVERYTYPEDESC    TYPE CHAR25,
+              DOCUMENTCAT         TYPE CHAR10,
+              DOCUMENTCATDESC     TYPE CHAR20,
+            END OF TY_STRU.
+
+    DATA : IT_FINAL TYPE STANDARD TABLE OF TY_STRU,
+           WA_FINAL TYPE TY_STRU.
+
+
+
+    DATA : S_DATE TYPE RANGE OF SY-DATUM.
+
+    APPEND VALUE #( SIGN = 'I'  OPTION = 'BT'  LOW = F_DATE  HIGH = T_DATE ) TO S_DATE.
+
+
+    SELECT A~VBELN                     AS INBOUND_DELIVERY ,
+           A~BLDAT                     AS DOCUMENT_DATE ,
+           A~LIFNR                     AS SUPPLIER,
+           B~NAME1                     AS SUPPLIERNAME,
+           A~LFDAT                     AS DELIVERY_DATE,
+           A~WADAT_IST                 AS ACTUALGRDATE ,
+           CAST( A~ANZPK AS CHAR )     AS NOOFPACKAGE ,
+           A~WBSTK                     AS GMGOODSMOVEMENT ,
+           A~WADAT_IST                 AS ACTUALGDSMOVEMENT ,
+           CAST( C~POSNR AS CHAR )     AS ITEM,
+           C~PSTYV                     AS ITEMCATEGORY,
+           C~WERKS                     AS PLANT ,
+           C~LGORT                     AS STORAGELOCATION ,
+           E~LGOBE                     AS STORAGELOCATIONDESC ,
+           C~MATNR                     AS MATERIAL,
+           CAST( C~LFIMG AS CHAR )     AS DELIVERYQTY ,
+           C~MEINS                     AS SALES_UNIT,
+           C~BWART                     AS MOVEMENTTYPE ,
+           F~BTEXT                     AS MOVEMENTTYPEDESC ,
+           D~MAKTX                     AS ITEMDESCRIPTION ,
+           CAST( C~ORMNG AS CHAR )     AS ORIGDELIVERYQTY ,
+           C~VGBEL                     AS REFERENCEDOC ,
+           CAST( C~VGPOS AS CHAR )     AS REFERENCEITEM ,
+           A~VERUR                     AS EXTERNALID ,
+           A~BORGR_GRP                 AS INBOUNDDLYGROUP ,
+           A~ERNAM                     AS CREATEDBY ,
+           A~ERDAT                     AS CREATEDON ,
+           A~ERZET                     AS CREATEDTIME ,
+           A~AENAM                     AS CHANGEBY ,
+           A~AEDAT                     AS CHANGEON ,
+           A~LFART                     AS DELIVERYTYPE ,
+           G~VTEXT                     AS DELIVERYTYPEDESC ,
+           A~VBTYP                     AS DOCUMENTCAT ,
+           H~DDTEXT                    AS DOCUMENTCATDESC
+       FROM LIKP AS A
+       LEFT OUTER JOIN LFA1 AS B
+       ON ( A~LIFNR = B~LIFNR )
+       LEFT OUTER JOIN LIPS AS C
+       ON ( A~VBELN = C~VBELN )
+       LEFT OUTER JOIN MAKT AS D
+       ON ( C~MATNR = D~MATNR )
+       LEFT OUTER JOIN T001L AS E
+       ON ( C~LGORT = E~LGORT )"AND E~SPRAS = @SY-LANGU )
+       LEFT OUTER JOIN T156T AS F
+       ON ( C~BWART = F~BWART AND F~SOBKZ = '' AND F~KZBEW IN ( 'L', 'B' ) AND F~KZZUG = '' AND F~KZVBR = '' AND F~SPRAS = @SY-LANGU )
+       LEFT OUTER JOIN TVLKT AS G
+       ON ( A~LFART = G~LFART AND G~SPRAS = @SY-LANGU )
+       LEFT OUTER JOIN DD07T AS H
+       ON ( A~VBTYP = H~DOMVALUE_L AND H~DOMNAME = 'VBTYP' AND H~DDLANGUAGE = @SY-LANGU )
+       INTO TABLE @DATA(IT_LIKP)
+       WHERE A~BLDAT IN @S_DATE AND A~LFART = 'EL'." AND a~vbeln = '0180000084'.
+
+
+    MOVE-CORRESPONDING IT_LIKP TO IT_FINAL.
+
+    SORT IT_FINAL BY INBOUND_DELIVERY ITEM.
+
+    LOOP AT IT_FINAL ASSIGNING FIELD-SYMBOL(<WA_LIKP>).
+
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_LIKP>-MATERIAL
+        IMPORTING
+          OUTPUT = <WA_LIKP>-MATERIAL.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_LIKP>-REFERENCEDOC
+        IMPORTING
+          OUTPUT = <WA_LIKP>-REFERENCEDOC.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_LIKP>-REFERENCEITEM
+        IMPORTING
+          OUTPUT = <WA_LIKP>-REFERENCEITEM.
+
+      SHIFT <WA_LIKP>-ITEM LEFT DELETING LEADING '0'.
+      SHIFT <WA_LIKP>-NOOFPACKAGE LEFT DELETING LEADING '0'.
+
+
+      READ TABLE IT_LIKP INTO DATA(WA_LIKP) WITH KEY INBOUND_DELIVERY = <WA_LIKP>-INBOUND_DELIVERY.
+      <WA_LIKP>-CREATEDONANDTIME   = |{ WA_LIKP-CREATEDON } & { WA_LIKP-CREATEDTIME+0(2) }:{ WA_LIKP-CREATEDTIME+2(2) }:{ WA_LIKP-CREATEDTIME+2(2) }|.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_LIKP>-INBOUND_DELIVERY
+        IMPORTING
+          OUTPUT = <WA_LIKP>-INBOUND_DELIVERY.
+
+
+    ENDLOOP.
+
+
+
+
+
+    DATA(JSON_WRITER) = CL_SXML_STRING_WRITER=>CREATE(
+                          TYPE = IF_SXML=>CO_XT_JSON ).
+    CALL TRANSFORMATION ID SOURCE RESULT = IT_FINAL
+                           RESULT XML JSON_WRITER.
+    DATA(JSON) = JSON_WRITER->GET_OUTPUT( ).
+
+    DATA: LO_JSON_DATA TYPE REF TO ZCL_TREX_JSON_SERIALIZER,
+          JSON1        TYPE STRING.
+
+    CREATE OBJECT LO_JSON_DATA
+      EXPORTING
+        DATA = IT_FINAL.
+
+* serialize data
+
+    LO_JSON_DATA->SERIALIZE( ).
+
+* get serialized json data string
+
+    JSON1 = LO_JSON_DATA->GET_DATA( ).
+
+    "cl_demo_output=>get converts ABAP data to HTML and is secure
+*    server->response->set_cdata(
+*      data = cl_demo_output=>get( connections ) ).
+    SERVER->RESPONSE->SET_CDATA(
+      DATA = JSON1 ).
+
+
+
+
+
+
+
+  ENDMETHOD.
