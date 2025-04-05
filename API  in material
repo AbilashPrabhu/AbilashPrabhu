@@ -1,0 +1,457 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+*
+*    DATA : it_migo_h TYPE TABLE OF zapi_migo_head,
+*           wa_migo_h TYPE zapi_migo_head.
+*
+*    DATA : it_migo TYPE TABLE OF zapi_migo_item,
+*           wa_migo TYPE zapi_migo_item.
+
+    TYPES : BEGIN OF TY_STRU,
+              DOCUMENT_NO         TYPE MBLNR,
+              DOCUMENT_DATE       TYPE BLDAT,
+              POSTING_DATE        TYPE BUDAT,
+              DELIVERY_NOTE       TYPE XBLNR1,
+              BILL_OF_LADING      TYPE FRBNR1,
+              SUPPLIER            TYPE NAME1,
+              HEADER_TEXT         TYPE BKTXT,
+              LINE                TYPE CHAR4,
+              MAT_SHORT_TEXT      TYPE SGTXT,
+              MATERIAL            TYPE MATNR,
+              QTY_IN_UNE          TYPE CHAR20,
+              EUOM                TYPE MEINS,
+              SLOC                TYPE LGORT_D,
+              SLOC_DESC           TYPE CHAR20,
+              COST_CENTER         TYPE KOSTL,
+              PROFITCENTER        TYPE PRCTR,
+              GL_ACCOUNT          TYPE SAKNR,
+              MOVEMENT            TYPE BWART,
+              DIRECTION           TYPE CHAR1,
+              STOCKTYPE           TYPE MB_INSMK,
+              STOCKTYPE_DESC      TYPE CHAR20,
+              PLANT               TYPE WERKS_D,
+              VENDOR              TYPE ELIFN,
+              DEL_COMP_IN_PO_ITEM TYPE ELIKZ,
+              REF_DOC             TYPE LFBNR,
+              ORDER_QUANTITY      TYPE CHAR20,
+              RECEIVED            TYPE CHAR20,
+              PO_NO               TYPE EBELN,
+              ORDER_TYPE          TYPE BSART,
+              ORDER_TYPE_DESC     TYPE CHAR20,
+              SUPPLIER1           TYPE LIFNR,
+              SUPPLIER1_NAME      TYPE NAME1,
+              DOCUMENT_DATE1      TYPE AEDAT,
+              INFO_RECORD         TYPE INFNR,
+              NET_PRICE           TYPE CHAR20,
+              REQUEST_LINE_ITEM   TYPE char6,
+              MOVEMENT_TYPE       TYPE BWART,
+              MATERIAL_DOC        TYPE MBLNR,
+              POSTING_DATE1       TYPE BUDAT,
+              QUANTITY            TYPE CHAR20,
+              ORDER_UOM           TYPE MEINS,
+              AMOT_IN_LO_CUR      TYPE CHAR20,
+              QTY_IN_OPUN         TYPE CHAR20,
+              AMOUNT              TYPE CHAR20,
+              CON_CONTROL         TYPE EBTYP,
+              DELIVERY_DATE2      TYPE BBEIN,
+              QUANTITY1           TYPE CHAR20,
+              INBOUD_DELIVERY_NO  TYPE VBELN_VL,
+              REFERECNE           TYPE XBLNR_LONG,
+              CREATED_ON          TYPE BBERD,
+              INBOUD_DELIVERY_NO1 TYPE VBELN_VL,
+              SUPPLIER2           TYPE LIFNR,
+              SUPPLIER2_NAME      TYPE NAME1,
+              DELIVERY_DATE       TYPE LFDAT_V,
+              ITEM                TYPE POSNR_VL,
+              MATERIAL1           TYPE MATNR,
+              DELIVERY_QUANTITY   TYPE CHAR20,
+              SUOM                TYPE MEINS,
+              REFERENCE_DOC       TYPE VGBEL,
+              PLANT1              TYPE WERKS_D,
+              SLOC1               TYPE LGORT_D,
+            END OF TY_STRU.
+
+
+    DATA : WA_ITEM TYPE TY_STRU,
+           IT_ITEM TYPE TABLE OF TY_STRU.
+
+    TYPES : BEGIN OF TY_STRU1,
+              DOCUMENT_NO         TYPE MBLNR,
+              DOCUMENT_DATE       TYPE BLDAT,
+              POSTING_DATE        TYPE BUDAT,
+              DELIVERY_NOTE       TYPE XBLNR1,
+              BILL_OF_LADING      TYPE FRBNR1,
+              SUPPLIER            TYPE NAME1,
+              HEADER_TEXT         TYPE BKTXT,
+              LINE                TYPE MB_LINE_ID,
+              MAT_SHORT_TEXT      TYPE SGTXT,
+              MATERIAL            TYPE MATNR,
+              QTY_IN_UNE          TYPE CHAR20,
+              EUOM                TYPE MEINS,
+              SLOC                TYPE LGORT_D,
+              SLOC_DESC           TYPE char30,
+              COST_CENTER         TYPE KOSTL,
+              PROFITCENTER        TYPE PRCTR,
+              GL_ACCOUNT          TYPE SAKNR,
+              MOVEMENT            TYPE BWART,
+              DIRECTION           TYPE CHAR1,
+              STOCKTYPE           TYPE MB_INSMK,
+              STOCKTYPE_DESC      TYPE CHAR20,
+              PLANT               TYPE WERKS_D,
+              VENDOR              TYPE ELIFN,
+              DEL_COMP_IN_PO_ITEM TYPE ELIKZ,
+              REF_DOC             TYPE LFBNR,
+              ORDER_QUANTITY      TYPE CHAR20,
+              RECEIVED            TYPE CHAR20,
+              PO_NO               TYPE EBELN,
+              ORDER_TYPE          TYPE BSART,
+              ORDER_TYPE_DESC     TYPE CHAR20,
+              SUPPLIER1           TYPE LIFNR,
+              SUPPLIER1_NAME      TYPE NAME1,
+              DOCUMENT_DATE1      TYPE AEDAT,
+              INFO_RECORD         TYPE INFNR,
+              NET_PRICE           TYPE CHAR20,
+              REQUEST_LINE_ITEM   TYPE BNFPO,
+              MOVEMENT_TYPE       TYPE BWART,
+              MATERIAL_DOC        TYPE MBLNR,
+              POSTING_DATE1       TYPE BUDAT,
+              QUANTITY            TYPE CHAR20,
+              ORDER_UOM           TYPE MEINS,
+              AMOT_IN_LO_CUR      TYPE CHAR20,
+              QTY_IN_OPUN         TYPE CHAR20,
+              AMOUNT              TYPE CHAR20,
+              CON_CONTROL         TYPE EBTYP,
+              DELIVERY_DATE2      TYPE BBEIN,
+              QUANTITY1           TYPE CHAR20,
+              INBOUD_DELIVERY_NO  TYPE VBELN_VL,
+              REFERECNE           TYPE XBLNR_LONG,
+              CREATED_ON          TYPE BBERD,
+              INBOUD_DELIVERY_NO1 TYPE VBELN_VL,
+              SUPPLIER2           TYPE LIFNR,
+              SUPPLIER2_NAME      TYPE NAME1,
+              DELIVERY_DATE       TYPE LFDAT_V,
+              ITEM                TYPE POSNR_VL,
+              MATERIAL1           TYPE MATNR,
+              DELIVERY_QUANTITY   TYPE CHAR20,
+              SUOM                TYPE MEINS,
+              REFERENCE_DOC       TYPE VGBEL,
+              PLANT1              TYPE WERKS_D,
+              SLOC1               TYPE LGORT_D,
+*              102_mvt              TYPE bwart,
+            END OF TY_STRU1.
+
+*       DATA : it_102 TYPE TABLE OF ty_stru1,
+*              wa_102 TYPE ty_stru1.
+
+
+*      CALL METHOD me->get_userdetails
+*      EXPORTING
+*        server   = server                " HTTP Framework (iHTTP) HTTP Server
+*      IMPORTING
+*        matdocno = DATA(mblnr).                " ABAP system field: Current date of application server
+
+    CALL METHOD ME->GET_USERDETAILS
+      EXPORTING
+        SERVER   = SERVER           " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        FROMDATE = DATA(FROMDATE)             " ABAP system field: Current date of application server
+        TODATE   = DATA(TODATE).             " Posting Date in the Document
+
+    DATA: S_DATE TYPE RANGE OF SY-DATUM.
+
+    APPEND VALUE #( SIGN = 'I' OPTION = 'BT' LOW = FROMDATE HIGH = TODATE ) TO S_DATE.
+
+
+
+    SELECT A~MBLNR,
+           A~BLDAT,
+           A~BUDAT,
+           A~XBLNR,
+           A~FRBNR,
+           A~BKTXT,
+           B~ZEILE,
+           B~SGTXT,
+           B~MATNR,
+           B~MENGE,
+           B~BPMNG,
+           B~MEINS,
+           B~LGORT,
+           B~DMBTR,
+           B~KOSTL,
+           B~SAKTO,
+           B~BWART,
+           B~INSMK,
+           B~LFBNR,
+           B~WERKS,
+           B~LIFNR,
+           B~ELIKZ,
+           B~LFBJA,
+           B~LSMNG,
+           B~EBELN,
+           B~EBELP,
+           B~PRCTR,
+           B~BUDAT_MKPF,
+           B~VBELP_IM,
+           C~BSART,
+           C~LIFNR AS LIFNR1,
+           C~AEDAT,
+           C~BEDAT,
+           C~WAERS,
+           C~WKURS,
+           D~INFNR,
+           D~NETPR,
+           D~MENGE AS PO_MENGE,
+           D~BNFPO,
+           E~EBTYP,
+           E~MENGE AS MENGE1,
+           E~EINDT,
+           E~VBELN,
+           E~ERDAT AS ERDAT1,
+           E~XBLNR AS XBLNR1
+*           f~posnr,
+*           f~matnr as matnr1,
+*           f~lfimg,
+*           f~meins AS meins1,
+*           f~vgbel,
+*           f~werks as werks1,
+*           f~lgort as lgort1
+        FROM MKPF AS A
+        LEFT OUTER JOIN MSEG AS B
+        ON ( A~MBLNR = B~MBLNR )
+        LEFT OUTER JOIN EKKO AS C
+        ON ( B~EBELN = C~EBELN )
+        LEFT OUTER JOIN EKPO AS D
+        ON ( B~EBELN = D~EBELN AND B~EBELP = D~EBELP )
+        LEFT OUTER JOIN EKES AS E
+        ON ( B~VBELN_IM = E~VBELN AND B~VBELP_IM = E~VBELP )
+*        LEFT OUTER JOIN lips as f
+*        ON ( b~vbeln_im = e~vbeln AND b~vbelp_im = f~posnr )
+        INTO TABLE @DATA(IT_MKPF)
+        WHERE A~BUDAT IN @S_DATE AND B~EBELN NE '' AND C~BSART IN ( 'ZDOM','ZIMP' ) AND B~BWART = '101'." AND b~ebeln = '0001200017' .
+
+
+*    SELECT * FROM mseg INTO TABLE @DATA(it_ch) FOR ALL ENTRIES IN @it_mkpf WHERE ebeln = @it_mkpf-ebeln AND ebelp = @it_mkpf-ebelp
+*                                                                             AND matnr = @it_mkpf-matnr AND LFBNR = @it_mkpf-LFBNR AND bwart = '102'.
+
+
+
+    LOOP AT IT_MKPF INTO DATA(WA_MKPF).
+
+*      READ TABLE it_ch INTO DATA(wa_ch) with KEY ebeln = wa_mkpf-ebeln  ebelp = wa_mkpf-ebelp  matnr = wa_mkpf-matnr  LFBNR = wa_mkpf-LFBNR.
+
+*      if wa_ch-LFBNR <> wa_mkpf-LFBNR.
+
+      WA_ITEM-DOCUMENT_NO           = WA_MKPF-MBLNR.
+      WA_ITEM-DOCUMENT_DATE         = WA_MKPF-BLDAT.
+      WA_ITEM-POSTING_DATE          = WA_MKPF-BUDAT.
+      WA_ITEM-DELIVERY_NOTE         = WA_MKPF-XBLNR.
+      WA_ITEM-BILL_OF_LADING        = WA_MKPF-FRBNR.
+      SELECT SINGLE NAME1 FROM LFA1 INTO WA_ITEM-SUPPLIER WHERE LIFNR =  WA_MKPF-LIFNR.
+      WA_ITEM-HEADER_TEXT           = WA_MKPF-BKTXT.
+      WA_ITEM-LINE                  = WA_MKPF-ZEILE.
+*      wa_item-mat_short_text        = wa_mkpf-sgtxt.
+      WA_ITEM-MATERIAL              = WA_MKPF-MATNR.
+      SELECT SINGLE MAKTX FROM MAKT INTO WA_ITEM-MAT_SHORT_TEXT WHERE MATNR = WA_MKPF-MATNR.
+      WA_ITEM-QTY_IN_UNE            = WA_MKPF-MENGE.
+      WA_ITEM-EUOM                  = WA_MKPF-MEINS.
+      WA_ITEM-SLOC                  = WA_MKPF-LGORT.
+      SELECT SINGLE LGOBE FROM T001L INTO WA_ITEM-SLOC_DESC WHERE LGORT = WA_MKPF-LGORT.
+      WA_ITEM-COST_CENTER           = WA_MKPF-KOSTL.
+      WA_ITEM-PROFITCENTER          = WA_MKPF-PRCTR.
+      WA_ITEM-GL_ACCOUNT            = WA_MKPF-SAKTO.
+      WA_ITEM-MOVEMENT              = WA_MKPF-BWART.
+      WA_ITEM-SUPPLIER              = WA_MKPF-LIFNR.
+*        wa_item-DIRECTION             = wa_mkpf-
+      WA_ITEM-STOCKTYPE             = WA_MKPF-INSMK.
+      IF WA_ITEM-STOCKTYPE = 'X'.
+        WA_ITEM-STOCKTYPE_DESC = 'Quality inspection'.
+      ELSEIF WA_ITEM-STOCKTYPE = 'S'.
+        WA_ITEM-STOCKTYPE_DESC = 'Blocked'.
+      ELSEIF WA_ITEM-STOCKTYPE = '2'.
+        WA_ITEM-STOCKTYPE_DESC = 'Quality inspection'.
+      ELSEIF WA_ITEM-STOCKTYPE = '3'.
+        WA_ITEM-STOCKTYPE_DESC = 'Blocked'.
+      ELSEIF WA_ITEM-STOCKTYPE = ' '.
+        WA_ITEM-STOCKTYPE_DESC = 'Unrestricted-use'.
+      ELSEIF WA_ITEM-STOCKTYPE = 'F'.
+        WA_ITEM-STOCKTYPE_DESC = 'Unrestricted-use'.
+      ENDIF.
+
+
+
+
+      WA_ITEM-PLANT                 = WA_MKPF-WERKS.
+      WA_ITEM-VENDOR                = WA_MKPF-LIFNR.
+      WA_ITEM-DEL_COMP_IN_PO_ITEM   = WA_MKPF-ELIKZ.
+      WA_ITEM-REF_DOC               = WA_MKPF-LFBJA.
+*      wa_item-order_quantity        = wa_mkpf-bpmng.
+      WA_ITEM-ORDER_QUANTITY        = WA_MKPF-PO_MENGE.
+      WA_ITEM-RECEIVED              = WA_MKPF-LSMNG.
+      WA_ITEM-PO_NO                 = WA_MKPF-EBELN.
+
+      WA_ITEM-ORDER_TYPE            = WA_MKPF-BSART.
+      SELECT SINGLE BATXT FROM T161T INTO WA_ITEM-ORDER_TYPE_DESC WHERE BSART = WA_MKPF-BSART AND SPRAS = SY-LANGU.
+      WA_ITEM-SUPPLIER1             = WA_MKPF-LIFNR1.
+      SELECT SINGLE NAME1 FROM LFA1  INTO WA_ITEM-SUPPLIER1_NAME WHERE LIFNR = WA_MKPF-LIFNR1.
+      WA_ITEM-DOCUMENT_DATE1        = WA_MKPF-BEDAT.
+      WA_ITEM-INFO_RECORD           = WA_MKPF-INFNR.
+      IF WA_MKPF-NETPR IS NOT INITIAL.
+        WA_ITEM-NET_PRICE             = WA_MKPF-NETPR / 100.
+      ENDIF.
+
+      IF WA_MKPF-WAERS = 'INR'.
+        WA_ITEM-NET_PRICE             = WA_ITEM-NET_PRICE .
+      ELSE.
+        WA_ITEM-NET_PRICE             = WA_ITEM-NET_PRICE * WA_MKPF-WKURS.
+      ENDIF.
+
+
+      SELECT SINGLE * FROM MSEG INTO @DATA(WA_102) WHERE EBELN = @WA_ITEM-PO_NO AND EBELP = @WA_MKPF-EBELP AND MATNR = @WA_ITEM-MATERIAL.
+
+
+
+
+      WA_ITEM-REQUEST_LINE_ITEM     = WA_MKPF-BNFPO.
+      WA_ITEM-MOVEMENT_TYPE         = WA_MKPF-BWART.
+      WA_ITEM-MATERIAL_DOC          = WA_MKPF-MBLNR.
+      WA_ITEM-POSTING_DATE1         = WA_MKPF-BUDAT_MKPF.
+      WA_ITEM-QUANTITY              = WA_MKPF-MENGE.
+      WA_ITEM-ORDER_UOM             = WA_MKPF-MEINS.
+      IF WA_MKPF-DMBTR IS NOT INITIAL.
+        WA_ITEM-AMOT_IN_LO_CUR        = WA_MKPF-DMBTR / 100.
+      ENDIF.
+
+      IF WA_MKPF-WAERS = 'INR'.
+        WA_ITEM-AMOT_IN_LO_CUR = WA_ITEM-AMOT_IN_LO_CUR.
+      ELSE.
+        WA_ITEM-AMOT_IN_LO_CUR = WA_ITEM-QUANTITY * WA_ITEM-NET_PRICE.
+      ENDIF.
+
+      WA_ITEM-QTY_IN_OPUN           = WA_MKPF-BPMNG.
+*        wa_item-amount                = wa_mkpf-wrbtr.
+      WA_ITEM-CON_CONTROL           = WA_MKPF-EBTYP.
+      WA_ITEM-DELIVERY_DATE2        = WA_MKPF-EINDT.
+      WA_ITEM-QUANTITY1             = WA_MKPF-MENGE1.
+      WA_ITEM-INBOUD_DELIVERY_NO    = WA_MKPF-VBELN.
+      WA_ITEM-REFERECNE             = WA_MKPF-XBLNR1.
+      WA_ITEM-CREATED_ON            = WA_MKPF-ERDAT1.
+      SELECT SINGLE ERDAT FROM EKES INTO WA_ITEM-CREATED_ON WHERE EBELN = WA_MKPF-EBELN AND EBELP = WA_MKPF-EBELP.
+
+      SELECT SINGLE VBELN,LIFNR,LFDAT FROM LIKP INTO @DATA(WA_LIKP) WHERE VBELN = @WA_ITEM-INBOUD_DELIVERY_NO.
+      WA_ITEM-INBOUD_DELIVERY_NO1   = WA_LIKP-VBELN.
+      WA_ITEM-SUPPLIER2             = WA_LIKP-LIFNR.
+      SELECT SINGLE NAME1 FROM LFA1  INTO WA_ITEM-SUPPLIER2_NAME WHERE LIFNR = WA_ITEM-SUPPLIER2.
+      WA_ITEM-DELIVERY_DATE         = WA_LIKP-LFDAT.
+
+      SELECT SINGLE * FROM LIPS INTO @DATA(WA_LIPS) WHERE VBELN = @WA_ITEM-INBOUD_DELIVERY_NO1 AND POSNR = @WA_MKPF-VBELP_IM.
+      WA_ITEM-ITEM                  = WA_LIPS-POSNR.
+      WA_ITEM-MATERIAL1             = WA_LIPS-MATNR.
+      WA_ITEM-DELIVERY_QUANTITY     = WA_LIPS-LFIMG.
+      WA_ITEM-SUOM                  = WA_LIPS-MEINS.
+      WA_ITEM-REFERENCE_DOC         = WA_LIPS-VGBEL.
+      WA_ITEM-PLANT1                = WA_LIPS-WERKS.
+      WA_ITEM-SLOC1                 = WA_LIPS-LGORT.
+
+
+
+      CONDENSE : WA_ITEM-DELIVERY_QUANTITY,WA_ITEM-QTY_IN_OPUN,WA_ITEM-QUANTITY,WA_ITEM-RECEIVED,WA_ITEM-ORDER_QUANTITY,WA_ITEM-QTY_IN_UNE.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-MATERIAL
+        IMPORTING
+          OUTPUT = WA_ITEM-MATERIAL.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-MATERIAL1
+        IMPORTING
+          OUTPUT = WA_ITEM-MATERIAL1.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-PO_NO
+        IMPORTING
+          OUTPUT = WA_ITEM-PO_NO.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-LINE
+        IMPORTING
+          OUTPUT = WA_ITEM-LINE.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-REFERENCE_DOC
+        IMPORTING
+          OUTPUT = WA_ITEM-REFERENCE_DOC.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-INBOUD_DELIVERY_NO
+        IMPORTING
+          OUTPUT = WA_ITEM-INBOUD_DELIVERY_NO.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-INBOUD_DELIVERY_NO1
+        IMPORTING
+          OUTPUT = WA_ITEM-INBOUD_DELIVERY_NO1.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-PROFITCENTER
+        IMPORTING
+          OUTPUT = WA_ITEM-PROFITCENTER.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = WA_ITEM-REQUEST_LINE_ITEM
+        IMPORTING
+          OUTPUT = WA_ITEM-REQUEST_LINE_ITEM.
+
+
+      APPEND WA_ITEM TO IT_ITEM.
+      CLEAR : WA_ITEM.
+
+*      MOVE-CORRESPONDING it_item to it_102.
+*     ENDIF.
+*     CLEAR : wa_ch.
+    ENDLOOP.
+
+
+
+
+
+    SORT IT_ITEM BY DOCUMENT_NO ASCENDING.
+
+    DATA(JSON_WRITER) = CL_SXML_STRING_WRITER=>CREATE(
+                       TYPE = IF_SXML=>CO_XT_JSON ).
+    CALL TRANSFORMATION ID SOURCE RESULT = IT_ITEM
+                           RESULT XML JSON_WRITER.
+    DATA(JSON) = JSON_WRITER->GET_OUTPUT( ).
+
+    DATA: LO_JSON_DATA TYPE REF TO ZCL_TREX_JSON_SERIALIZER,
+          JSON1        TYPE STRING.
+
+    CREATE OBJECT LO_JSON_DATA
+      EXPORTING
+        DATA = IT_ITEM.
+
+* serialize data
+
+    LO_JSON_DATA->SERIALIZE( ).
+
+* get serialized json data string
+
+    JSON1 = LO_JSON_DATA->GET_DATA( ).
+
+    SERVER->RESPONSE->SET_CDATA(
+         DATA = JSON1 ).
+
+
+
+
+
+  ENDMETHOD.
