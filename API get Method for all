@@ -1,0 +1,29 @@
+  method GET_USERDETAILS.
+
+
+       DATA: http_client TYPE REF TO if_http_client .
+    DATA: w_string TYPE string,
+          w_result TYPE string,
+          r_str    TYPE string.
+    DATA: result_tab TYPE TABLE OF string.
+
+    DATA: fields TYPE  tihttpnvp.
+
+    CALL METHOD server->request->if_http_entity~get_form_fields
+      CHANGING
+        fields = fields.
+*    DELETE fields WHERE plant <> 'plant' .
+    IF fields IS NOT INITIAL.
+      READ TABLE fields ASSIGNING FIELD-SYMBOL(<lfs_fields>) WITH KEY name = 'category'.
+      IF sy-subrc IS INITIAL.
+        CATEGORY = <lfs_fields>-value.
+      ENDIF.
+
+*
+*      READ TABLE fields ASSIGNING <lfs_fields> WITH KEY name = 'plant'.
+*      IF sy-subrc IS INITIAL.
+*        plant = <lfs_fields>-value.
+*      ENDIF.
+    ENDIF.
+
+  endmethod.
