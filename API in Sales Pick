@@ -1,0 +1,227 @@
+  METHOD IF_HTTP_EXTENSION~HANDLE_REQUEST.
+
+
+    CALL METHOD ME->GET_USERDETAILS
+      EXPORTING
+        SERVER   = SERVER         " HTTP Framework (iHTTP) HTTP Server
+      IMPORTING
+        FROMDATE = DATA(F_DATE)          " ABAP system field: Current date of application server
+        TODATE   = DATA(T_DATE).          " ABAP system field: Current date of application server
+
+    DATA : S_DATE TYPE RANGE OF SY-DATUM.
+    DATA : GS_JSON TYPE STRING.
+
+
+    TYPES : BEGIN OF TY_STRU,
+              OUTBOUNDDELIVERY     TYPE VBELN,
+              SHIPTOPARTY          TYPE KUNNR,
+              SHIPTOPARTYNAME      TYPE NAME1,
+              DOCUMENTDATE         TYPE CHAR10,
+              PLANNEDGI            TYPE CHAR10,
+              ACTUALGIDATETIME     TYPE CHAR20,
+              TOTALWEIGHT          TYPE CHAR15,
+              TOTALWEIGHTUOM       TYPE MEINS,
+              NOOFPACKAGES         TYPE CHAR10,
+              ITEM                 TYPE CHAR6,
+              MATERIAL             TYPE MATNR,
+              MATERIALDESC         TYPE MAKTX,
+              DELIVERYQTY          TYPE CHAR15,
+              DELIVERYUOM1         TYPE MEINS,
+              REQSEGMENT           TYPE CHAR15,
+              STOCKSEGMENT         TYPE CHAR15,
+              ITEMCATEGORY         TYPE CHAR5,
+              PICKINGSTATUS        TYPE CHAR1,
+              PICKINGSTATUSDESC    TYPE CHAR20,
+              PICKINGQTY           TYPE CHAR15,
+              PICKINGUOM           TYPE MEINS,
+              WMSTATUS             TYPE CHAR1,
+              BATCH                TYPE CHARG_D,
+              VALUETYPE            TYPE CHAR15,
+              OPENQTY              TYPE CHAR15,
+              STAGEDATE            TYPE CHAR10,
+              GROSSWEIGHT          TYPE CHAR15,
+              GROSSWEIGHTUOM       TYPE MEINS,
+              PLANT                TYPE WERKS_D,
+              STORAGELOCATION      TYPE LGORT_D,
+              PICKDATETIME         TYPE CHAR20,
+              WAREHOUSENO          TYPE CHAR3,
+              OVERALLPICKSTATUS    TYPE CHAR1,
+              LOADINGDATE          TYPE CHAR10,
+              GM                   TYPE CHAR1,
+              BS                   TYPE CHAR1,
+              CREATEDBY            TYPE ERNAM,
+              CREATEDONTIME        TYPE CHAR20,
+              CHANGEDBY            TYPE AENAM,
+              CHANGEDON            TYPE CHAR10,
+              DELIVERYTYPE         TYPE LFART,
+              DELIVERYTYPENAME     TYPE CHAR30,
+              DOCUMENTCAT          TYPE VBTYPL,
+              DOMESTICORDER        TYPE VGBEL,
+              PICKINGREQUEST       TYPE CHAR10,
+              GDGOODSISSUEDELIVERY TYPE CHAR15,
+              DOMESTICINVOICE      TYPE CHAR10,
+              JOURNALENTRY         TYPE BELNR_D,
+              REFITEM              TYPE CHAR6,
+            END OF TY_STRU.
+
+    DATA : IT_FINAL TYPE TABLE OF TY_STRU,
+           WA_FINAL TYPE TY_STRU.
+
+
+
+    APPEND VALUE #( SIGN = 'I'  OPTION = 'BT'  LOW = F_DATE  HIGH = T_DATE ) TO S_DATE.
+
+    SELECT A~VBELN                         AS OUTBOUNDDELIVERY,
+           A~KUNNR                         AS SHIPTOPARTY,
+           A~BLDAT                         AS DOCUMENTDATE,
+           A~WADAT                         AS PLANNEDGI,
+           A~WADAT_IST                     AS ACTUALGIDATE,
+           A~SPE_WAUHR_IST                 AS ACTUALGITIME,
+           A~BTGEW                         AS TOTALWEIGHT,
+           A~GEWEI                         AS TOTALWEIGHTUOM,
+           A~ANZPK                         AS NOOFPACKAGES,
+           B~POSNR                         AS ITEM,
+           B~MATNR                         AS MATERIAL,
+           C~MAKTX                         AS MATERIALDESC,
+           CAST( B~LFIMG AS CHAR )         AS DELIVERYQTY,
+           CAST( B~LFIMG AS CHAR )         AS PICKINGQTY,
+           B~MEINS                         AS DELIVERYUOM1,
+           B~MEINS                         AS PICKINGUOM,
+           B~SGT_RCAT                      AS REQSEGMENT,
+           B~SGT_SCAT                      AS STOCKSEGMENT,
+           B~PSTYV                         AS ITEMCATEGORY,
+           B~KOSTA                         AS PICKINGSTATUS,
+           B~LVSTA                         AS WMSTATUS,
+           B~CHARG                         AS BATCH,
+           B~BWTAR                         AS VALUETYPE,
+           CAST( B~LFIMG AS CHAR )         AS OPENQTY,
+           B~MBDAT                         AS STAGEDATE,
+           CAST( B~BRGEW AS CHAR )         AS GROSSWEIGHT,
+           B~GEWEI                         AS GROSSWEIGHTUOM,
+           B~WERKS                         AS PLANT,
+           B~LGORT                         AS STORAGELOCATION,
+           A~KODAT                         AS PICKDATE,
+           A~KOUHR                         AS PICKTIME,
+           A~LGNUM                         AS WAREHOUSENO,
+           B~KOSTA                         AS OVERALLPICKSTATUS,
+           A~LDDAT                         AS LOADINGDATE,
+           A~WBSTK                         AS GM,
+           A~FKSTK                         AS BS,
+           A~ERNAM                         AS CREATEDBY,
+           A~ERDAT                         AS CREATEDON,
+           A~ERZET                         AS CREATEDTIME,
+           A~AENAM                         AS CHANGEDBY,
+           A~AEDAT                         AS CHANGEDON,
+           A~LFART                         AS DELIVERYTYPE,
+           A~VBTYP                         AS DOCUMENTCAT,
+           B~VGBEL                         AS DOMESTICORDER,
+           B~ERDAT                         AS PICKINGREQUEST,
+           E~MBLNR                         AS GDGOODSISSUEDELIVERY,
+           F~VBELN                         AS DOMESTICINVOICE,
+           G~BELNR                         AS JOURNALENTRY,
+           H~POSNR                         AS REFITEM
+         FROM LIKP AS A
+         LEFT OUTER JOIN LIPS AS B
+         ON ( A~VBELN = B~VBELN )
+         LEFT OUTER JOIN MAKT AS C
+         ON ( B~MATNR = C~MATNR )
+         LEFT OUTER JOIN VBUK AS D
+         ON ( A~VBELN = D~VBELN )
+         LEFT OUTER JOIN MSEG AS E
+         ON ( B~VBELN = E~VBELN_IM AND B~POSNR = E~VBELP_IM )
+         LEFT OUTER JOIN VBRP AS F
+         ON ( B~VBELN = F~VGBEL AND B~POSNR = F~VGPOS )
+         LEFT OUTER JOIN BKPF AS G
+         ON ( F~VBELN = G~XBLNR )
+         LEFT OUTER JOIN VBAP AS H
+         ON ( B~VGBEL = H~VBELN AND B~VGPOS = H~POSNR )
+         INTO TABLE @DATA(IT_VBKP)
+         WHERE A~BLDAT IN @S_DATE AND A~LFART IN ( 'JF','LF','ZDLF','ZELF' ).
+
+    IT_FINAL = CORRESPONDING #( IT_VBKP ).
+
+
+    LOOP AT IT_FINAL ASSIGNING FIELD-SYMBOL(<WA_FINAL>).
+
+      DATA(IT_READ) = IT_VBKP[ OUTBOUNDDELIVERY = <WA_FINAL>-OUTBOUNDDELIVERY   ITEM = <WA_FINAL>-ITEM ].
+
+      SELECT SINGLE VTEXT FROM TVLKT INTO <WA_FINAL>-DELIVERYTYPENAME WHERE LFART = <WA_FINAL>-DELIVERYTYPE AND SPRAS = SY-LANGU.
+      <WA_FINAL>-CREATEDONTIME = |{ IT_READ-CREATEDON } & { IT_READ-CREATEDTIME+0(2) }:{ IT_READ-CREATEDTIME+2(2) }:{ IT_READ-CREATEDTIME+4(2) }|.
+
+      SELECT SINGLE NAME1 FROM KNA1 INTO <WA_FINAL>-SHIPTOPARTYNAME WHERE KUNNR = <WA_FINAL>-SHIPTOPARTY.
+
+      <WA_FINAL>-PICKDATETIME = |{ IT_READ-PICKDATE } & { IT_READ-PICKTIME+0(2) }:{ IT_READ-PICKTIME+2(2) }:{ IT_READ-PICKTIME+4(2) }|.
+      <WA_FINAL>-ACTUALGIDATETIME = |{ IT_READ-ACTUALGIDATE } & { IT_READ-ACTUALGITIME+0(2) }:{ IT_READ-ACTUALGITIME+2(2) }:{ IT_READ-ACTUALGITIME+4(2) }|.
+
+      IF <WA_FINAL>-PICKINGSTATUS = 'A'.
+        <WA_FINAL>-PICKINGSTATUSDESC = 'Not yet processed'.
+      ELSEIF <WA_FINAL>-PICKINGSTATUS = 'B'.
+        <WA_FINAL>-PICKINGSTATUSDESC = 'Partially processed'.
+      ELSEIF <WA_FINAL>-PICKINGSTATUS = 'C'.
+        <WA_FINAL>-PICKINGSTATUSDESC = 'Completely processed'.
+      ELSEIF <WA_FINAL>-PICKINGSTATUS = ' '.
+        <WA_FINAL>-PICKINGSTATUSDESC = 'Not Relevant'.
+      ENDIF.
+
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-OUTBOUNDDELIVERY
+        IMPORTING
+          OUTPUT = <WA_FINAL>-OUTBOUNDDELIVERY.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-ITEM
+        IMPORTING
+          OUTPUT = <WA_FINAL>-ITEM.
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          INPUT  = <WA_FINAL>-MATERIAL
+        IMPORTING
+          OUTPUT = <WA_FINAL>-MATERIAL.
+
+      <WA_FINAL>-REFITEM = |{ <WA_FINAL>-REFITEM ALPHA = OUT }|.
+
+
+*        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+*        EXPORTING
+*          INPUT  = <WA_FINAL>-REFITEM
+*        IMPORTING
+*          OUTPUT = <WA_FINAL>-REFITEM.
+
+      CONDENSE : <WA_FINAL>-TOTALWEIGHT.
+
+
+    ENDLOOP.
+
+
+    GS_JSON = /UI2/CL_JSON=>SERIALIZE(
+              DATA             = IT_FINAL
+*              compress         = abap_true
+*              name             =
+              PRETTY_NAME      = /UI2/CL_JSON=>PRETTY_MODE-CAMEL_CASE
+          ) .
+
+    SERVER->RESPONSE->SET_CDATA(
+      EXPORTING
+        DATA   =  GS_JSON   " Character data
+*              offset = 0    " Offset into character data
+*              length = -1    " Length of character data
+    ).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ENDMETHOD.
