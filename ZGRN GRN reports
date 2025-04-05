@@ -1,0 +1,874 @@
+
+report zgrn_date.
+
+tables : ekko,ekpo,mseg , lfa1 , mara.
+
+types : begin of ty_final,
+          ebeln      type ekko-ebeln,
+          lifnr      type ekko-lifnr,
+          ebelp      type ekpo-ebelp,
+          bedat      type ekko-bedat,
+          WKURS      type ekko-WKURS,
+          werks      type ekpo-werks,
+          netpr      type p length 16 decimals 4,
+          inr_frg    type p length 16 decimals 4,
+          netpr1     type p length 16 decimals 4,
+          pstyp      type ekpo-pstyp,
+          mblnr      type mseg-mblnr,
+          bwart      type mseg-bwart,
+          zeile      type mseg-zeile,
+          matnr      type mseg-matnr,
+          lfbnr      type mseg-lfbnr,
+*          zeile     type mseg-ZEILE,
+          dmbtr      type mseg-dmbtr,
+          dmbtr_1      type mseg-dmbtr,
+          menge      type mseg-menge,
+          menge1      type mseg-menge,
+          meins      type mseg-meins,
+          budat_mkpf type mseg-budat_mkpf,
+          name1      type lfa1-name1,
+          maktx      type makt-maktx,
+          dmbtr1     type mseg-dmbtr,
+          charg      type mseg-charg,
+          licha      type mch1-licha,
+          xblnr_mkpf type mseg-xblnr_mkpf,
+          bldat      type mkpf-bldat,
+          vbeln_im   type mseg-vbeln_im,
+          vbelp_im   type mseg-vbelp_im,
+          cpudt_mkpf type mseg-cpudt_mkpf,
+          usnam      type mkpf-usnam,
+          extwg      type mara-extwg,
+          mtart      type mara-mtart,
+          bismt      type mara-bismt,
+          ewbez      type twewt-ewbez,
+          steuc      type marc-steuc,
+
+        end of ty_final.
+
+
+
+types : begin of ty_fin,
+
+          ebeln      type ekko-ebeln,
+          lifnr      type ekko-lifnr,
+          netpr      type ekpo-netpr,
+          mblnr      type mseg-mblnr,
+          matnr      type mseg-matnr,
+          menge      type mseg-menge,
+          meins      type mseg-meins,
+          budat_mkpf type mseg-budat_mkpf,
+          name1      type lfa1-name1,
+          maktx      type makt-maktx,
+
+
+        end of ty_fin.
+
+data: it_final type standard table of ty_final,
+      it_temp  type standard table of ty_final,
+      it_temp1 type standard table of ty_final,
+      wa_final type ty_final.
+
+
+data : it_fieldcat type slis_t_fieldcat_alv,
+       wa_fieldcat type slis_fieldcat_alv.
+data: gt_layout type slis_layout_alv.
+
+selection-screen begin of block b1 with frame title text-001.
+
+  select-options : s_budat for sy-datum,
+                   s_lifnr for lfa1-lifnr,
+                   s_werks for ekpo-werks,
+                   s_matnr for mseg-matnr,
+                   s_bsart for ekko-bsart.
+
+
+  selection-screen skip 1.
+  parameters: r1 radiobutton group rad1 default 'X' user-command flag,
+              r2 radiobutton group rad1,
+              r3 radiobutton group rad1,
+              r4 radiobutton group rad1.
+
+selection-screen end of block b1.
+
+
+*AT SELECTION-SCREEN OUTPUT.
+
+
+*
+*  IF r1 = 'X' .
+*
+**if S_BSART[] is INITIAL.
+*
+*   clear S_BSART[].
+*
+*
+*    s_bsart-low =  'ZDOM' .
+*    s_bsart-sign =  'I'.
+*    s_bsart-option = 'EQ'.
+*    APPEND s_bsart.
+*
+*    s_bsart-low =  'ZIMP' .
+*    s_bsart-sign =  'I'.
+*    s_bsart-option = 'EQ'.
+*    APPEND s_bsart.
+*
+**endif.
+*
+*
+*  ELSEIF r2 = 'X' .
+*
+*
+**if S_BSART[] is INITIAL.
+*
+*    clear S_BSART[].
+*
+*    s_bsart-low =  'ZDOM' .
+*    s_bsart-sign =  'I'.
+*    s_bsart-option = 'EQ'.
+*    APPEND s_bsart.
+*
+*    s_bsart-low =  'ZIMP' .
+*    s_bsart-sign =  'I'.
+*    s_bsart-option = 'EQ'.
+*    APPEND s_bsart.
+*
+**endif.
+*
+*
+*  ELSEIF r3 = 'X' .
+*
+**if S_BSART[] is INITIAL.
+*
+*    clear S_BSART[].
+*
+*    s_bsart-low =  'ZSUB' .
+*    s_bsart-sign =  'I'.
+*    s_bsart-option = 'EQ'.
+*    APPEND s_bsart.
+*
+**   endif.
+*
+*  ENDIF.
+*
+
+*AT SELECTION-SCREEN OUTPUT.
+*
+*
+*  IF r4 = 'X'.
+*    LOOP AT SCREEN.
+*      IF screen-GROUP1 = 123.
+*        SCREEN-active = 0.
+*        screen-invisible = 0.
+*        MODIFY SCREEN.
+*      ENDIF.
+*    ENDLOOP.
+*  ENDIF.
+
+
+start-of-selection.
+  perform get_data.
+  perform field_cat.
+  perform display_data.
+
+
+*&---------------------------------------------------------------------*
+*& Form get_data
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+form get_data .
+
+  if r4 is initial .
+
+    select
+    a~ebeln,
+    a~bedat,
+    a~bsart,
+    a~KNUMV,
+    b~ebelp,
+    b~pstyp,
+    b~MENGE as k,
+    a~lifnr,
+    a~WAERS,
+    a~WKURS,
+    b~netpr,
+    b~werks,
+    c~vbeln_im,
+    c~vbelp_im,
+    c~cpudt_mkpf,
+    c~mblnr,
+    c~zeile,
+    c~matnr,
+    c~lfbnr,
+    c~dmbtr  ,
+    c~menge ,
+    c~bwart ,
+    c~meins,
+    c~budat_mkpf,
+    c~xblnr_mkpf,
+    c~charg
+    from ekko as a
+    inner join ekpo as b on a~ebeln = b~ebeln "AND b~loekz NE 'L'
+    inner join mseg as c on b~ebeln = c~ebeln  and b~ebelp = c~ebelp and b~matnr = c~matnr and c~bwart =  '101'  "c~bwart = '101'
+    where c~budat_mkpf  in @s_budat and a~lifnr in @s_lifnr and c~matnr in @s_matnr and b~werks in @s_werks and a~bsart in @s_bsart
+    into table @data(it_fin) .
+
+
+
+*  SELECT mblnr,zeile,lfbnr ,lifnr , lfpos,bwart,matnr FROM mseg  WHERE bwart = '102'
+*  INTO TABLE @DATA(it_ch).
+
+
+    select * from mseg  where bwart in (  '102' , '122' )
+    into table @data(it_ch).
+
+    if it_fin is not initial.
+      select
+      mblnr,
+      mjahr ,
+      zeile,
+      dmbtr,
+      bwart,
+      charg
+      from mseg for all entries in @it_fin where ebeln = @it_fin-ebeln and matnr = @it_fin-matnr and werks = @it_fin-werks
+        into table @data(it_ms).
+    endif.
+
+
+
+    select mblnr, sum( dmbtr ) as dmbtr
+       from @it_ms as a
+       group by mblnr, dmbtr
+       into table @data(it_sum).
+
+
+
+    loop at it_fin into data(wa_fin).
+
+
+      read table it_ch into data(wa_ch) with key lfbnr = wa_fin-mblnr
+                                                 lfpos =  wa_fin-zeile
+                                                 lifnr = wa_fin-lifnr matnr = wa_fin-matnr.
+
+      if  wa_ch-lfbnr <> wa_fin-mblnr.
+
+        wa_final-ebeln = wa_fin-ebeln.
+        wa_final-ebelp = wa_fin-ebelp.
+        wa_final-bedat = wa_fin-bedat.
+        wa_final-werks = wa_fin-werks.
+        wa_final-pstyp = wa_fin-pstyp.
+        wa_final-lifnr = wa_fin-lifnr.
+        wa_final-charg = wa_fin-charg.
+        wa_final-zeile = wa_fin-zeile.
+        wa_final-lfbnr = wa_fin-lfbnr.
+        wa_final-matnr = wa_fin-matnr.
+        wa_final-bwart = wa_fin-bwart.
+        wa_final-meins = wa_fin-meins.
+        wa_final-DMBTR_1 = wa_fin-DMBTR / 100.
+        wa_final-MENGE1  = wa_fin-MENGE .
+
+      select SINGLE  sum( KBETR ) from prcd_elements INTO @data(wa_fr)
+        where KNUMV = @wa_fin-KNUMV and KPOSN = @wa_final-ebelp and KSCHL = 'FRB1'.
+
+
+      select * from prcd_elements INTO TABLE @data(wa_1)
+        where KNUMV = @wa_fin-KNUMV and KPOSN = @wa_final-ebelp and KSCHL =   'R000' .
+
+       if wa_fin-WAERS ne 'USD'.
+
+        if wa_1 is INITIAL.
+        wa_final-netpr = wa_fin-netpr / 100."note1
+        ELSEIF wa_1 IS NOT INITIAL.
+        select SINGLE KBETR from prcd_elements INTO @wa_final-netpr
+        where KNUMV = @wa_fin-KNUMV and KPOSN = @wa_final-ebelp and KSCHL = 'ZPRI'.
+        ENDIF.
+
+        wa_final-inr_frg = ( wa_fr / wa_fin-k ) +  wa_final-netpr .
+       ENDIF.
+
+
+
+        if wa_fin-WAERS = 'USD'.
+
+        if wa_1 is INITIAL.
+        wa_final-netpr1 = wa_fin-netpr / 100."note2
+        ELSEIF wa_1 IS NOT INITIAL.
+        select SINGLE KBETR from prcd_elements INTO @wa_final-NETPR1
+        where KNUMV = @wa_fin-KNUMV and KPOSN = @wa_final-ebelp and KSCHL = 'ZPRI'.
+        ENDIF.
+
+
+
+        if wa_final-MENGE1 is NOT INITIAL.
+        wa_final-netpr = wa_final-DMBTR_1 / wa_final-MENGE1.
+        endif.
+
+        if wa_final-NETPR1 is NOT INITIAL.
+         wa_final-WKURS = wa_final-netpr / wa_final-NETPR1.
+        endif.
+
+        ENDIF.
+
+        wa_final-mblnr = wa_fin-mblnr.
+
+        if r3 = 'X'.
+          wa_final-dmbtr = wa_final-netpr * wa_fin-menge.
+        else.
+          wa_final-dmbtr = wa_fin-dmbtr / 100.
+        endif.
+
+        wa_final-menge = wa_fin-menge.
+        wa_final-budat_mkpf = wa_fin-budat_mkpf.
+        wa_final-xblnr_mkpf = wa_fin-xblnr_mkpf.
+        wa_final-vbeln_im = wa_fin-vbeln_im.
+        wa_final-vbelp_im = wa_fin-vbelp_im.
+        wa_final-cpudt_mkpf = wa_fin-cpudt_mkpf.
+
+
+        select single licha from  mch1 into wa_final-licha where matnr = wa_final-matnr  and charg = wa_final-charg.
+        select single extwg from  mara into wa_final-extwg where matnr = wa_final-matnr .
+        select single steuc from  marc into wa_final-steuc where matnr = wa_final-matnr .
+
+        select single ewbez from twewt into wa_final-ewbez where extwg = wa_final-extwg .
+
+        read table it_sum into data(wa_sum) with key  mblnr = wa_final-mblnr.
+        wa_final-dmbtr1 = wa_sum-dmbtr / 100.
+
+        select single name1 from lfa1 into corresponding fields of wa_final where lifnr = wa_final-lifnr.
+        select single maktx from makt into corresponding fields of wa_final where matnr = wa_final-matnr.
+        select single bldat from mkpf into wa_final-bldat where mblnr = wa_final-mblnr.
+        select single usnam from mkpf into wa_final-usnam where mblnr = wa_final-mblnr.
+        select single mtart from mara into wa_final-mtart where matnr = wa_final-matnr.
+        select single bismt from mara into wa_final-bismt where matnr = wa_final-matnr.
+
+
+        append wa_final to it_final.
+        clear : wa_final, wa_fr,wa_1.
+
+      endif.
+    endloop.
+
+
+
+
+  endif.
+
+
+  if r1 is not initial.
+    delete it_final where pstyp = '3'.
+  elseif r3 is not initial.
+    delete it_final where pstyp = '0'.
+  endif.
+
+  sort it_final by ebeln ascending.
+
+
+  """"""""""""""""""""""""""""""
+  if r2 is not initial.
+    clear it_final.
+    select
+    a~ebeln,
+    a~bedat,
+    a~WAERS,
+    a~WKURS,
+    a~knumv,
+    b~ebelp,
+    b~pstyp,
+    b~MENGE as k,
+    a~lifnr,
+    b~netpr,
+    b~werks,
+    c~vbeln_im,
+    c~vbelp_im,
+    c~cpudt_mkpf,
+    c~mblnr,
+    c~zeile,
+    c~matnr,
+    c~lfbnr,
+    c~dmbtr  ,
+    c~menge ,
+    c~bwart ,
+    c~meins,
+    c~budat_mkpf,
+    c~xblnr_mkpf,
+    c~charg
+    from ekko as a
+    inner join ekpo as b on a~ebeln = b~ebeln and b~loekz eq ' '
+    inner join mseg as c on b~ebeln = c~ebeln  and b~ebelp = c~ebelp and b~matnr = c~matnr and c~bwart = '101'
+    where c~budat_mkpf  in @s_budat and a~lifnr in @s_lifnr and c~matnr in @s_matnr and b~werks in @s_werks and a~bsart in @s_bsart
+    into table @data(it_fin1) .
+
+
+    select mblnr,zeile,lfbnr , lfpos from mseg  where bwart in ( '102' , '122' )
+    into table @data(it_ch1).
+
+
+    select
+    mblnr,
+    mjahr ,
+    zeile,
+    dmbtr
+    from mseg for all entries in @it_fin1 where ebeln = @it_fin1-ebeln and matnr = @it_fin1-matnr and werks = @it_fin1-werks
+      into table @data(it_ms1).
+
+
+    select mblnr, sum( dmbtr ) as dmbtr
+       from @it_ms as a
+       group by mblnr
+       into table @data(it_sum1).
+
+
+    loop at it_fin1 into data(wa_fin1).
+
+      read table it_ch1 into data(wa_ch1) with key lfbnr = wa_fin1-mblnr  lfpos =  wa_fin1-zeile .
+
+*
+      if  wa_ch1-lfbnr <> wa_fin-mblnr.
+
+        wa_final-ebeln = wa_fin1-ebeln.
+        wa_final-bedat = wa_fin1-bedat.
+        wa_final-charg = wa_fin1-charg.
+        wa_final-werks = wa_fin1-werks.
+        wa_final-lifnr = wa_fin1-lifnr.
+        wa_final-matnr = wa_fin1-matnr.
+        wa_final-WKURS = wa_fin1-WKURS.
+
+
+      select * from prcd_elements INTO TABLE @WA_1
+        where KNUMV = @wa_fin-KNUMV and KPOSN = @wa_final-ebelp and KSCHL =   'R000' .
+
+      select SINGLE sum( KBETR ) from prcd_elements INTO @wa_fr
+        where KNUMV = @wa_fin1-KNUMV and KPOSN = @wa_final-ebelp and KSCHL = 'FRB1'.
+
+       if wa_fin1-WAERS ne 'USD'.
+
+        if wa_1 is INITIAL.
+        wa_final-netpr = wa_fin1-netpr / 100."note3
+        ELSEIF wa_1 IS NOT INITIAL.
+        select SINGLE KBETR from prcd_elements INTO @wa_final-NETPR
+        where KNUMV = @wa_fin-KNUMV and KPOSN = @wa_final-ebelp and KSCHL = 'ZPRI'.
+        ENDIF.
+
+        wa_final-inr_frg = ( wa_fr / WA_FIN1-k ) +  wa_final-netpr .
+       ENDIF.
+
+
+        if wa_fin1-WAERS = 'USD'.
+
+        if wa_1 is INITIAL.
+        wa_final-netpr1 = wa_fin1-netpr / 100."note4
+        wa_final-netpr = wa_fin1-netpr / 100."note5
+        ELSEIF wa_1 IS NOT INITIAL.
+
+        select SINGLE KBETR from prcd_elements INTO @wa_final-netpr1
+        where KNUMV = @wa_fin-KNUMV and KPOSN = @wa_final-ebelp and KSCHL = 'ZPRI'.
+        wa_final-netpr = wa_final-netpr1.
+        ENDIF.
+
+
+
+
+        wa_final-NETPR = wa_final-netpr  *   wa_fin1-WKURS .
+
+        ENDIF.
+
+        wa_final-mblnr = wa_fin1-mblnr.
+        wa_final-menge = wa_fin1-menge.
+        wa_final-lfbnr = wa_fin1-lfbnr.
+        wa_final-bwart = wa_fin1-bwart.
+        wa_final-meins = wa_fin1-meins.
+        wa_final-budat_mkpf = wa_fin1-budat_mkpf.
+        wa_final-xblnr_mkpf = wa_fin1-xblnr_mkpf.
+
+
+        select single extwg from  mara into wa_final-extwg where matnr = wa_final-matnr .
+        select single steuc from  marc into wa_final-steuc where matnr = wa_final-matnr .
+        select single licha from  mch1 into wa_final-licha where matnr = wa_final-matnr and charg = wa_final-charg.
+
+        select single ewbez from twewt into wa_final-ewbez where extwg = wa_final-extwg .
+
+        select single name1 from lfa1 into corresponding fields of wa_final where lifnr = wa_final-lifnr.
+        select single maktx from makt into corresponding fields of wa_final where matnr = wa_final-matnr.
+
+        select single usnam from mkpf into wa_final-usnam where mblnr = wa_final-mblnr.
+        select single mtart from mara into wa_final-mtart where matnr = wa_final-matnr.
+        select single bismt from mara into wa_final-bismt where matnr = wa_final-matnr.
+
+
+        append wa_final to it_final.
+        clear : wa_final, wa_fr.
+
+      endif.
+    endloop.
+
+
+*    it_temp1[]  = it_final.
+*
+*    loop at it_final assigning field-symbol(<it_demo1>) .
+*
+*      select single lfbnr from mseg into @data(wa_y1) where lfbnr = @<it_demo1>-lfbnr and matnr = @<it_demo1>-matnr
+*        and bwart = '122'.
+*
+*      if wa_y1 is not initial .
+*
+*        DELETE it_final WHERE lfbnr = wa_y1.
+**        <it_demo>-menge = <it_demo>-menge - wa_y-menge.
+*
+*      endif.
+*
+*    endloop.
+
+  endif.
+
+  if r4 is not initial.
+
+    call transaction 'ZGRN_ATTA'.
+
+  endif.
+
+DATA: lv_lines TYPE I.
+
+DESCRIBE TABLE it_final LINES lv_lines.
+
+IF lv_lines = 0.
+ MESSAGE 'No data found' TYPE 'I'.
+ENDIF.
+
+
+endform.
+
+
+*&---------------------------------------------------------------------*
+*& Form field_cat
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+form field_cat .
+
+  if r1 is not initial or r3 is not initial.
+    gt_layout-zebra = 'X'.                                         "Zebra Color on Output
+    gt_layout-colwidth_optimize = 'X'.
+
+    perform genfcat using 'PO Number '                         'EBELN'   '1' '' '' '' '' ''.
+    perform genfcat using 'PO Line No '                        'EBELP'   '2' '' '' '' '' ''.
+    perform genfcat using 'PO Date'                            'BEDAT'   '2' '' '' '' '' ''.
+    perform genfcat using 'Gate IN No '                        'VBELN_IM'   '3' '' '' '' '' ''.
+    perform genfcat using 'GLNo '                              'VBELP_IM'   '4' '' '' '' '' ''.
+    perform genfcat using 'GIN Date '                          'CPUDT_MKPF'   '5' '' '' '' '' ''.
+    perform genfcat using 'PO TYPE '                           'PSTYP'   '6' '' '' '' '' ''.
+    perform genfcat using 'GRN No '                            'MBLNR'   '7' '' '' '' '' ''.
+    perform genfcat using 'Posting Date '                      'BUDAT_MKPF'   '8' '' '' '' '' ''.
+    perform genfcat using 'Vendor '                            'LIFNR'   '9' '' '' '' '' ''.
+    perform genfcat using 'Vendor Name'                        'NAME1'   '10' '' '' '' '' ''.
+    perform genfcat using 'Item'                               'MATNR'   '11' '' '' '' '' ''.
+    perform genfcat using 'Item Name'                          'MAKTX'   '12' '' '' '' '' ''.
+    perform genfcat using 'HSN'                                'STEUC'   '12' '' '' '' '' ''.
+    perform genfcat using 'Mat Type'                           'MTART'   '12' '' '' '' '' ''.
+    perform genfcat using 'Old Item Code'                      'BISMT'   '12' '' '' '' '' ''.
+    perform genfcat using 'Mat Group'                          'EXTWG'   '13' '' '' '' '' ''.
+    perform genfcat using 'Group Des'                          'EWBEZ'   '14' '' '' '' '' ''.
+    perform genfcat using 'Plant'                              'WERKS'   '15' '' '' '' '' ''.
+    perform genfcat using 'GRN Quan'                           'MENGE'   '16' '' '' '' '' ''.
+    perform genfcat using 'Batch'                              'CHARG'   '16' '' '' '' '' ''.
+    perform genfcat using 'Supplier Batch'                     'LICHA'   '16' '' '' '' '' ''.
+    perform genfcat using 'Unit'                               'MEINS'   '17' '' '' '' '' ''.
+    perform genfcat using 'PRICE(Inr)'                         'NETPR'   '18' '' '' '' '' ''.
+    perform genfcat using 'PRICE AFTER FREIGHT(Inr)'           'INR_FRG'   '18' '' '' '' '' ''.
+    perform genfcat using 'USD'                                'NETPR1'   '18' '' '' '' '' ''.
+    perform genfcat using 'Exchange Rate'                      'WKURS'   '18' '' '' '' '' ''.
+    perform genfcat using 'Item Value'                         'DMBTR'   '19' '' '' '' '' ''.
+    perform genfcat using 'Entered by'                         'USNAM'   '20' '' '' '' '' ''.
+    if r3 is initial.
+*    perform genfcat using ' Value'                         'DMBTR1'   '21' '' '' '' '' ''.
+    endif.
+    perform genfcat using ' InvoiceNumber'                         'XBLNR_MKPF'   '22' '' '' '' '' ''.
+    perform genfcat using 'BILL Date'                         'BLDAT'   '23' '' '' '' '' ''.
+
+
+
+  endif.
+
+  if r2 is not initial.
+
+    gt_layout-zebra = 'X'.                                         "Zebra Color on Output
+    gt_layout-colwidth_optimize = 'X'.
+
+    perform genfcat using 'PO Number '                         'EBELN'   '1' '' '' '' '' ''.
+    perform genfcat using 'PO Date '                           'BEDAT'   '1' '' '' '' '' ''.
+    perform genfcat using 'GRN No '                            'MBLNR'   '1' '' '' '' '' ''.
+    perform genfcat using 'Posting Date '                      'BUDAT_MKPF'   '1' '' '' '' '' ''.
+    perform genfcat using 'Vendor '                            'LIFNR'   '1' '' '' '' '' ''.
+    perform genfcat using 'Vendor Name'                        'NAME1'   '1' '' '' '' '' ''.
+    perform genfcat using 'Item'                               'MATNR'   '1' '' '' '' '' ''.
+    perform genfcat using 'HSN'                               'STEUC'   '1' '' '' '' '' ''.
+    perform genfcat using 'Mat Type'                           'MTART'   '1' '' '' '' '' ''.
+    perform genfcat using 'Old Item Code'                      'BISMT'   '1' '' '' '' '' ''.
+    perform genfcat using 'Item Name'                          'MAKTX'   '1' '' '' '' '' ''.
+    perform genfcat using 'Plant'                              'WERKS'   '1' '' '' '' '' ''.
+    perform genfcat using 'GRN Quan'                           'MENGE'   '1' '' '' '' '' ''.
+    perform genfcat using 'Batch'                              'CHARG'   '1' '' '' '' '' ''.
+    perform genfcat using 'Supplier Batch'                     'LICHA'   '1' '' '' '' '' ''.
+    perform genfcat using 'PRICE(Inr)'                         'NETPR'   '1' '' '' '' '' ''.
+    perform genfcat using 'PRICE AFTER FREIGHT(Inr)'           'INR_FRG' '1' '' '' '' '' ''.
+    perform genfcat using 'USD'                                'NETPR1'  '1' '' '' '' '' ''.
+    perform genfcat using 'Exchange Rate'                      'WKURS'   '1' '' '' '' '' ''.
+    perform genfcat using 'UNIT'                               'MEINS'   '1' '' '' '' '' ''.
+    perform genfcat using 'Entered by'                         'USNAM'   '1' '' '' '' '' ''.
+
+  endif.
+
+
+
+endform.
+
+
+
+form genfcat using value(p_0122)
+                   value(p_0123)
+                   value(p_0124)
+                   value(p_0125)
+                   value(p_0126)
+                   value(p_0127)
+                   value(p_0128)
+                   value(p_0129).
+
+
+  wa_fieldcat-seltext_l  = p_0122.
+  wa_fieldcat-fieldname  = p_0123.
+  wa_fieldcat-col_pos    = p_0124.
+  wa_fieldcat-do_sum     = p_0125.
+  wa_fieldcat-no_zero    = 'X'.
+  wa_fieldcat-key        = p_0126.
+  wa_fieldcat-just       = p_0127.
+  wa_fieldcat-lowercase  = p_0128.
+  wa_fieldcat-emphasize  = p_0129.
+
+  append wa_fieldcat to it_fieldcat.
+  clear wa_fieldcat.
+
+endform.
+
+*&---------------------------------------------------------------------*
+*& Form display_data
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+form display_data .
+  if r1 is not initial or r3 is not initial.
+    call function 'REUSE_ALV_GRID_DISPLAY'
+      exporting
+        i_callback_program      = sy-repid
+        i_callback_user_command = 'USER_COMMAND'
+        i_callback_top_of_page  = 'TOP_OF_PAGE'
+        is_layout               = gt_layout
+        it_fieldcat             = it_fieldcat
+      tables
+        t_outtab                = it_final
+*   EXCEPTIONS
+*       PROGRAM_ERROR           = 1
+*       OTHERS                  = 2
+      .
+    if sy-subrc <> 0.
+* Implement suitable error handling here
+    endif.
+  endif.
+
+
+  if r2 is not initial.
+    call function 'REUSE_ALV_GRID_DISPLAY'
+      exporting
+        i_callback_program      = sy-repid
+        i_callback_user_command = 'USER_COMMAND'
+        i_callback_top_of_page  = 'TOP_OF_PAGE'
+        is_layout               = gt_layout
+        it_fieldcat             = it_fieldcat
+      tables
+        t_outtab                = it_final
+*   EXCEPTIONS
+*       PROGRAM_ERROR           = 1
+*       OTHERS                  = 2
+      .
+    if sy-subrc <> 0.
+* Implement suitable error handling here
+    endif.
+  endif.
+
+
+
+
+
+endform.
+
+*&---------------------------------------------------------------------*
+*&      Form  top_of_page
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+form top_of_page .
+
+  if r1 is not initial.
+    data: lt_header  type slis_t_listheader,
+          wa_header1 type slis_listheader,
+          low        type char10,
+          high       type char10.
+
+    wa_header1-typ  = 'H'.
+*  WA_HEADER1-KEY = 'KL HI-Tech Secure Print Limited'.
+    wa_header1-info = 'MN Auto Products Private Limited.' .
+    append wa_header1 to lt_header.
+    clear wa_header1.
+
+    wa_header1-typ  = 'H'.
+*  wa_header1-key = 'Color : Blue : '.
+    wa_header1-info = 'GRN Date Wise.' .
+
+    append wa_header1 to lt_header.
+    clear wa_header1.
+
+    wa_header1-typ  = 'S'.
+*  wa_header1-key = 'Date   : '.
+    concatenate 'DATE : ' sy-datum+6(2) '.' sy-datum+4(2) '.' sy-datum(4)' ' ' ' into wa_header1-info separated by space.
+
+    append wa_header1 to lt_header.
+    clear: wa_header1.
+
+
+    call function 'REUSE_ALV_COMMENTARY_WRITE'
+      exporting
+        it_list_commentary = lt_header.
+
+
+  endif.
+
+  if r2 is not initial.
+    data: lt_header1 type slis_t_listheader,
+          wa_header2 type slis_listheader,
+          low1       type char10,
+          high1      type char10.
+
+    wa_header1-typ  = 'H'.
+*  WA_HEADER1-KEY = 'KL HI-Tech Secure Print Limited'.
+    wa_header1-info = 'MN Auto Products Private Limited.' .
+    append wa_header1 to lt_header.
+    clear wa_header1.
+
+    wa_header1-typ  = 'H'.
+*  wa_header1-key = 'Color : Blue : '.
+    wa_header1-info = 'GRN Item Wise.' .
+
+    append wa_header1 to lt_header.
+    clear wa_header1.
+
+    wa_header1-typ  = 'S'.
+*  wa_header1-key = 'Date   : '.
+    concatenate 'DATE : ' sy-datum+6(2) '.' sy-datum+4(2) '.' sy-datum(4)' ' ' ' into wa_header1-info separated by space.
+
+    append wa_header1 to lt_header.
+    clear: wa_header1.
+
+
+    call function 'REUSE_ALV_COMMENTARY_WRITE'
+      exporting
+        it_list_commentary = lt_header.
+
+
+  endif.
+
+
+
+
+
+  if r3 is not initial.
+*    DATA: lt_header1 TYPE slis_t_listheader,
+*          wa_header2 TYPE slis_listheader,
+*          low1       TYPE char10,
+*          high1      TYPE char10.
+
+    wa_header1-typ  = 'H'.
+*  WA_HEADER1-KEY = 'KL HI-Tech Secure Print Limited'.
+    wa_header1-info = 'MN Auto Products Private Limited.' .
+    append wa_header1 to lt_header.
+    clear wa_header1.
+
+    wa_header1-typ  = 'H'.
+*  wa_header1-key = 'Color : Blue : '.
+    wa_header1-info = 'Subcontract GRN' .
+
+    append wa_header1 to lt_header.
+    clear wa_header1.
+
+    wa_header1-typ  = 'S'.
+*  wa_header1-key = 'Date   : '.
+    concatenate 'DATE : ' sy-datum+6(2) '.' sy-datum+4(2) '.' sy-datum(4)' ' ' ' into wa_header1-info separated by space.
+
+    append wa_header1 to lt_header.
+    clear: wa_header1.
+
+
+    call function 'REUSE_ALV_COMMENTARY_WRITE'
+      exporting
+        it_list_commentary = lt_header.
+
+
+  endif.
+
+
+
+
+
+
+
+endform.
+*&---------------------------------------------------------------------*
+*& Form validation
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+form validation .
+
+
+  if s_budat is  initial.
+
+    message 'Please Select the Selection Criteria...' type 'E'.
+    leave list-processing.
+  endif.
+
+endform.
+
+
+
+*
+*DATA: lo_manager TYPE REF TO cl_gos_manager,
+*      la_obj     TYPE borident.
+**
+*PARAMETERS: p_comm TYPE char20 OBLIGATORY.
+**
+**
+*START-OF-SELECTION.
+**
+** Set object Key
+*  la_obj-objtype = 'ZPROFILE'.
+*  la_obj-objkey  = p_comm.
+**
+** GOS toolbar
+*  CREATE OBJECT lo_manager
+*    EXPORTING
+*      is_object    = la_obj
+*      ip_no_commit = space
+*    EXCEPTIONS
+*      OTHERS       = 1.
+**
+** To generate output
+*  WRITE: 'Pls Refer Attachement ICON for Create Attachements and View Attachments'.
