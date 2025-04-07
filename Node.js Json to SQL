@@ -1,0 +1,297 @@
+const axios = require('axios');
+const sql = require('mssql');
+const cron = require('node-cron'); 
+
+const convertDateFormat = (inputDate) => {
+    const year = inputDate.slice(0, 4);
+    const month = inputDate.slice(4, 6);
+    const day = inputDate.slice(6, 8);
+
+    return `${year}-${month}-${day}`;
+};
+
+const convertDateFormat1 = (inputDate) => {
+    const day = inputDate.slice(0, 2);
+    const month = inputDate.slice(3, 5);
+    const year = inputDate.slice(6, 10);
+
+    return `${year}-${month}-${day}`;
+};
+
+const convertDateTimeFormat = (inputDate) => {
+  const year = inputDate.slice(0, 4);
+  const month = inputDate.slice(4, 6);
+  const day = inputDate.slice(6, 8);
+  const hours = inputDate.slice(13, 15);
+  const minutes = inputDate.slice(16, 18);
+  const seconds = inputDate.slice(19, 21);
+
+    if (year === '') {
+        return null;
+    }
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+const convertDateTimeFormat1 = (inputDate) => {
+  const year = inputDate.slice(0, 4);
+  const month = inputDate.slice(4, 6);
+  const day = inputDate.slice(6, 8);
+
+  return `${year}-${month}-${day}`;
+
+    if (year === '') {
+        return null;
+    }
+
+    // return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+const fetchMaterials = async () => {
+    try {
+        const response = await axios.get('http://192.168.1.226:8086/sap/bc/mobile_app/conditiontype/get_pricelist?sap-client=500', {
+            auth: {
+                username: 'it4',
+                password: 'Super@654!',
+            },
+        });
+        const materialsFromSAP = response.data;
+
+        if (Array.isArray(materialsFromSAP)) {
+            const pool = await sql.connect({
+                user: 'sa',
+                password: 'super@123',
+                server: '192.168.1.219',
+                database: 'SAP_HANA',
+                options: {
+                    encrypt: false,
+                },
+            });
+
+            for (const material of materialsFromSAP) {
+                const request = pool.request();
+
+                // Update the field names based on the new structure
+                request.input('Conditiontype', sql.NVarChar, material.Conditiontype);
+                request.input('Pricelisttype', sql.NVarChar, material.Pricelisttype);
+                request.input('Pricelisttype_desc', sql.NVarChar, material.Pricelisttype_desc);
+                request.input('Material', sql.NVarChar, material.Material);
+                request.input('Material_desc', sql.NVarChar, material.Material_desc);
+                request.input('Status', sql.NVarChar, material.Status);
+                request.input('Validfrom', sql.Date, convertDateFormat(material.Validfrom));
+                request.input('Validto', sql.Date, convertDateFormat(material.Validto));
+                request.input('Processingstatus', sql.NVarChar, material.Processingstatus);
+                request.input('Conditionrecordno', sql.NVarChar, material.Conditionrecordno);
+                request.input('Conditionamount', sql.Float, material.Conditionamount);
+                request.input('Per', sql.Numeric, material.Per);
+                request.input('Uom', sql.NVarChar, material.Uom);
+                request.input('Unit', sql.NVarChar, material.Unit);
+                request.input('Calculationtype', sql.NVarChar, material.Calculationtype);
+                request.input('Calculationtype_desc', sql.NVarChar, material.Calculationtype_desc);
+                request.input('Deletion', sql.NVarChar, material.Deletion);
+                request.input('Deletion_desc', sql.NVarChar, material.Deletion_desc);
+                request.input('Oldvalue', sql.NVarChar, material.Oldvalue);
+                request.input('Newvalue', sql.NVarChar, material.Newvalue);
+                request.input('Createdby', sql.NVarChar, material.Createdby);
+                request.input('Createdon', sql.DateTime, convertDateTimeFormat1(material.Createdon));
+                request.input('Updatedateandtime', sql.DateTime, convertDateTimeFormat(material.Updatedateandtime));
+                request.input('Updatedby', sql.NVarChar, material.Updatedby);
+                request.input('Tcode', sql.NVarChar, material.Tcode);
+
+                const result = await request.query(`
+        SELECT * FROM dbo.salesprice_pr00
+        WHERE Conditiontype = @Conditiontype
+          AND Pricelisttype = @Pricelisttype
+          AND Pricelisttype_desc = @Pricelisttype_desc
+          AND Material = @Material
+          AND Material_desc = @Material_desc
+          AND Status = @Status
+          AND Validfrom = @Validfrom
+          AND Validto = @Validto
+          AND Processingstatus = @Processingstatus
+          AND Conditionrecordno = @Conditionrecordno
+          
+          AND Per = @Per
+          AND Uom = @Uom
+          AND Unit = @Unit
+          AND Calculationtype = @Calculationtype
+          AND Calculationtype_desc = @Calculationtype_desc
+          AND Deletion = @Deletion
+          AND Deletion_desc = @Deletion_desc
+          AND Oldvalue = @Oldvalue
+          AND Newvalue = @Newvalue
+          AND Createdby = @Createdby
+          AND Createdon = @Createdon
+          AND Updatedateandtime = @Updatedateandtime
+          and Updatedby = @Updatedby
+          AND Tcode = @Tcode;
+        
+        `);
+
+        if (result.recordset.length === 0) {
+          await request.query(`
+            INSERT INTO dbo.SalesPrice_PR00 (
+
+              Conditiontype,
+              Pricelisttype,
+              Pricelisttype_desc,
+              Material,
+              Material_desc,
+              Status,
+              Validfrom,
+              Validto,
+              Processingstatus,
+              Conditionrecordno,
+              Conditionamount,
+              Per,
+              Uom,
+              Unit,
+              Calculationtype,
+              Calculationtype_desc,
+              Deletion,
+              Deletion_desc,
+              Oldvalue,
+              Newvalue,
+              Createdby,
+              Createdon,
+              Updatedateandtime,
+              Updatedby,
+              Tcode
+            ) 
+            VALUES (
+
+              @Conditiontype,
+              @Pricelisttype,
+              @Pricelisttype_desc,
+              @Material,
+              @Material_desc,
+              @Status,
+              @Validfrom,
+              @Validto,
+              @Processingstatus,
+              @Conditionrecordno,
+              @Conditionamount,
+              @Per,
+              @Uom,
+              @Unit,
+              @Calculationtype,
+              @Calculationtype_desc,
+              @Deletion,
+              @Deletion_desc,
+              @Oldvalue,
+              @Newvalue,
+              @Createdby,
+              @Createdon,
+              @Updatedateandtime,
+              @Updatedby,
+              @Tcode
+            );
+          `);
+
+          console.log(`Record with material code ${material.Material} inserted successfully!`);
+                } else {
+                    const updateRequest = pool.request();
+
+                    // Update the input parameters for the update query
+                    updateRequest.input('Conditiontype', sql.NVarChar, material.Conditiontype);
+                    updateRequest.input('Pricelisttype', sql.NVarChar, material.Pricelisttype);
+                    updateRequest.input('Pricelisttype_desc', sql.NVarChar, material.Pricelisttype_desc);
+                    updateRequest.input('Material', sql.NVarChar, material.Material);
+                    updateRequest.input('Material_desc', sql.NVarChar, material.Material_desc);
+                    updateRequest.input('Status', sql.NVarChar, material.Status);
+                    updateRequest.input('Validfrom', sql.Date, convertDateFormat(material.Validfrom));
+                    updateRequest.input('Validto', sql.Date, convertDateFormat(material.Validto));
+                    updateRequest.input('Processingstatus', sql.NVarChar, material.Processingstatus);
+                    updateRequest.input('Conditionrecordno', sql.NVarChar, material.Conditionrecordno);
+                    updateRequest.input('Conditionamount', sql.Float, material.Conditionamount);
+                    updateRequest.input('Per', sql.Numeric, material.Per);
+                    updateRequest.input('Uom', sql.NVarChar, material.Uom);
+                    updateRequest.input('Unit', sql.NVarChar, material.Unit);
+                    updateRequest.input('Calculationtype', sql.NVarChar, material.Calculationtype);
+                    updateRequest.input('Calculationtype_desc', sql.NVarChar, material.Calculationtype_desc);
+                    updateRequest.input('Deletion', sql.NVarChar, material.Deletion);
+                    updateRequest.input('Deletion_desc', sql.NVarChar, material.Deletion_desc);
+                    updateRequest.input('Oldvalue', sql.NVarChar, material.Oldvalue);
+                    updateRequest.input('Newvalue', sql.NVarChar, material.Newvalue);
+                    updateRequest.input('Createdby', sql.NVarChar, material.Createdby);
+                    updateRequest.input('Createdon', sql.DateTime, convertDateTimeFormat1(material.Createdon));
+                    updateRequest.input('Updatedateandtime', sql.DateTime, convertDateTimeFormat(material.Updatedateandtime));
+                    updateRequest.input('Updatedby', sql.NVarChar, material.Updateby);
+                    updateRequest.input('Tcode', sql.NVarChar, material.Tcode);
+
+                    const updateResult = await updateRequest.query(`
+                    UPDATE dbo.salesprice_pr00
+                    SET 
+                        Conditiontype = @Conditiontype,
+                        Pricelisttype = @Pricelisttype,
+                        Pricelisttype_desc = @Pricelisttype_desc,
+                        Material = @Material,
+                        Material_desc = @Material_desc,
+                        Status = @Status,
+                        Validfrom = @Validfrom,
+                        Validto = @Validto,
+                        Processingstatus = @Processingstatus,
+                        Conditionrecordno = @Conditionrecordno,
+                        
+                        Per = @Per,
+                        Uom = @Uom,
+                        Unit = @Unit,
+                        Calculationtype = @Calculationtype,
+                        Calculationtype_desc = @Calculationtype_desc,
+                        Deletion = @Deletion,
+                        Deletion_desc = @Deletion_desc,
+                        Oldvalue = @Oldvalue,
+                        Newvalue = @Newvalue,
+                        Createdby = @Createdby,
+                        Createdon = @Createdon,
+                        Updatedateandtime = @Updatedateandtime,
+                        Updatedby = @Updatedby,
+                        Tcode = @Tcode
+                    WHERE  
+                        Conditiontype = @Conditiontype and
+                        Pricelisttype = @Pricelisttype and
+                        Pricelisttype_desc = @Pricelisttype_desc and
+                        Material = @Material and
+                        Material_desc = @Material_desc and
+                        Status = @Status and
+                        Validfrom = @Validfrom and
+                        Validto = @Validto and
+                        Processingstatus = @Processingstatus and
+                        Conditionrecordno = @Conditionrecordno and
+                        Conditionamount = @Conditionamount and
+                        Per = @Per and
+                        Uom = @Uom and
+                        Unit = @Unit and
+                        Calculationtype = @Calculationtype and
+                        Calculationtype_desc = @Calculationtype_desc and
+                        Deletion = @Deletion and
+                        Deletion_desc = @Deletion_desc and
+                        Oldvalue = @Oldvalue and
+                        Newvalue = @Newvalue and
+                        Createdby = @Createdby and
+                        Createdon = @Createdon and
+                        Updatedateandtime = @Updatedateandtime and
+                        Updatedby = @Updatedby and
+                        Tcode = @Tcode;
+                `);
+
+                    console.log(`Record with material code ${material.Conditionrecordno} updated successfully!`);
+                }
+            }
+        } else {
+            console.error('Error: materialsFromSAP is not an array');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+//cron.schedule('0 */4 * * *', async () => {
+//    await fetchMaterials();
+//   let now = new Date();
+///   let formattedDate = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+//   let formattedTime = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+//   console.log(`Scheduled task completed at Current Date: ${formattedDate}`);
+//   console.log(`Current Time: ${formattedTime}`);
+//  });
+
+
+fetchMaterials();
